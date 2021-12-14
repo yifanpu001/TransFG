@@ -17,6 +17,8 @@ from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 from apex import amp
 from apex.parallel import DistributedDataParallel as DDP
+# import torch.cuda.amp as amp
+# from torch.nn.parallel import DistributedDataParallel as DDP
 
 from models.modeling import VisionTransformer, CONFIGS
 from utils.scheduler import WarmupLinearSchedule, WarmupCosineSchedule
@@ -162,6 +164,8 @@ def valid(args, model, writer, test_loader, global_step):
     logger.info("Valid Accuracy: %2.5f" % val_accuracy)
     if args.local_rank in [-1, 0]:
         writer.add_scalar("test/accuracy", scalar_value=val_accuracy, global_step=global_step)
+        with open(f"{args.output_dir}/val_acc.txt", 'a') as f:
+            f.write(f"{global_step:05d}, {val_accuracy:6.4f}\n")
         
     return val_accuracy
 
@@ -300,7 +304,7 @@ def main():
                         help="Name of this run. Used for monitoring.")
     parser.add_argument("--dataset", choices=["CUB_200_2011", "car", "dog", "nabirds", "INat2017"], default="CUB_200_2011",
                         help="Which dataset.")
-    parser.add_argument('--data_root', type=str, default='/opt/tiger/minist')
+    parser.add_argument('--data_root', type=str, default='/home/data/fine_grained')
     parser.add_argument("--model_type", choices=["ViT-B_16", "ViT-B_32", "ViT-L_16",
                                                  "ViT-L_32", "ViT-H_14"],
                         default="ViT-B_16",
