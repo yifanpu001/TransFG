@@ -108,13 +108,13 @@ def get_loader(args):
     train_loader = DataLoader(trainset,
                               sampler=train_sampler,
                               batch_size=args.train_batch_size,
-                              num_workers=4,
+                              num_workers=args.workers,
                               drop_last=True,
                               pin_memory=True)
     test_loader = DataLoader(testset,
                              sampler=test_sampler,
                              batch_size=args.eval_batch_size,
-                             num_workers=4,
+                             num_workers=args.workers,
                              pin_memory=True) if testset is not None else None
 
     return train_loader, test_loader
