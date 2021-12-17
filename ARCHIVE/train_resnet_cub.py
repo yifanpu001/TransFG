@@ -5,6 +5,8 @@ import shutil
 import time
 import warnings
 from enum import Enum
+import logging
+from logging import handlers
 
 import torch
 import torch.nn as nn
@@ -27,8 +29,8 @@ model_names = sorted(name for name in models.__dict__
     and callable(models.__dict__[name]))
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
-parser.add_argument('data', metavar='DIR',
-                    help='path to dataset')
+# parser.add_argument('data', metavar='DIR',
+#                     help='path to dataset')
 parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                     choices=model_names,
                     help='model architecture: ' +
@@ -87,11 +89,27 @@ parser.add_argument("--train_batch_size", default=16, type=int,
                     help="Total batch size for training.")
 parser.add_argument("--eval_batch_size", default=8, type=int,
                     help="Total batch size for eval.")
+parser.add_argument('--train_url', type=str)
+
 best_acc1 = 0
 
 
 def main():
     args = parser.parse_args()
+
+    if args.pretrained:
+        args.train_url = os.path.join(
+            args.train_url, f"pretrained_epoch{args.epochs}_bs{args.train_batch_size}_lr{args.lr}"
+            )
+    else:
+        args.train_url = os.path.join(
+            args.train_url, f"epoch{args.epochs}_bs{args.train_batch_size}_lr{args.lr}"
+            )
+    if not os.path.exists(args.train_url):
+        os.makedirs(args.train_url)
+    logger = Logger(os.path.join(args.train_url, 'screen_output.log'))
+    args.print_custom = logger.log
+    # args.log = Logger(os.path.join(args.train_url, 'screen_output.log'), level='debug')
 
     if args.seed is not None:
         random.seed(args.seed)
@@ -131,6 +149,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
     if args.gpu is not None:
         print("Use GPU: {} for training".format(args.gpu))
+        # args.log.logger.info("Use GPU: {} for training".format(args.gpu))
 
     if args.distributed:
         if args.dist_url == "env://" and args.rank == -1:
@@ -144,13 +163,16 @@ def main_worker(gpu, ngpus_per_node, args):
     # create model
     if args.pretrained:
         print("=> using pre-trained model '{}'".format(args.arch))
+        # args.log.logger.info("=> using pre-trained model '{}'".format(args.arch))
         model = models.__dict__[args.arch](pretrained=True, num_classes=200)
     else:
         print("=> creating model '{}'".format(args.arch))
+        # args.log.logger.info("=> creating model '{}'".format(args.arch))
         model = models.__dict__[args.arch](num_classes=200)
 
     if not torch.cuda.is_available():
         print('using CPU, this will be slow')
+        # args.log.logger.info('using CPU, this will be slow')
     elif args.distributed:
         # For multiprocessing distributed, DistributedDataParallel constructor
         # should always set the single device scope, otherwise,
@@ -252,6 +274,7 @@ def main_worker(gpu, ngpus_per_node, args):
         validate(val_loader, model, criterion, args)
         return
 
+    t_start = time.time()
     for epoch in range(args.start_epoch, args.epochs):
         # if args.distributed:
         #     train_sampler.set_epoch(epoch)
@@ -275,7 +298,14 @@ def main_worker(gpu, ngpus_per_node, args):
                 'state_dict': model.state_dict(),
                 'best_acc1': best_acc1,
                 'optimizer' : optimizer.state_dict(),
-            }, is_best)
+            }, is_best, savepath=args.train_url)
+
+            t_curr = time.time()
+            eta_total = (t_curr - t_start) / (epoch + 1 - args.start_epoch) * (args.epochs - epoch - 1)
+            eta_hour = int(eta_total // 3600)
+            eta_min = int((eta_total - eta_hour * 3600) // 60)
+            eta_sec = int(eta_total - eta_hour * 3600 - eta_min * 60)
+            args.print_custom(f'[INFO] Finished epoch:{epoch:02d};  ETA {eta_hour:02d} h {eta_min:02d} m {eta_sec:02d} s')
 
 
 def train(train_loader, model, criterion, optimizer, epoch, args):
@@ -287,7 +317,8 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     progress = ProgressMeter(
         len(train_loader),
         [batch_time, data_time, losses, top1, top5],
-        prefix="Epoch: [{}]".format(epoch))
+        prefix="Epoch: [{}]".format(epoch),
+        log=None)
 
     # switch to train mode
     model.train()
@@ -321,8 +352,8 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if i % args.print_freq == 0:
-            progress.display(i)
+        if (i % args.print_freq == 0) or (i == len(train_loader) - 1):
+            args.print_custom(progress.display(i))
 
 
 def validate(val_loader, model, criterion, args):
@@ -333,7 +364,8 @@ def validate(val_loader, model, criterion, args):
     progress = ProgressMeter(
         len(val_loader),
         [batch_time, losses, top1, top5],
-        prefix='Test: ')
+        prefix='Test: ',
+        log=None)
 
     # switch to evaluate mode
     model.eval()
@@ -360,24 +392,28 @@ def validate(val_loader, model, criterion, args):
             batch_time.update(time.time() - end)
             end = time.time()
 
-            if i % args.print_freq == 0:
-                progress.display(i)
+            if (i % args.print_freq == 0) or (i == len(val_loader) - 1):
+                args.print_custom(progress.display(i))
 
-        progress.display_summary()
+        args.print_custom(progress.display_summary())
 
     return top1.avg
 
 
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
-    torch.save(state, filename)
+def save_checkpoint(state, is_best, savepath, filename='checkpoint.pth.tar'):
+    torch.save(state, os.path.join(savepath, filename))
     if is_best:
-        shutil.copyfile(filename, 'model_best.pth.tar')
+        shutil.copyfile(
+            os.path.join(savepath, filename),
+            os.path.join(savepath, 'model_best.pth.tar'))
+
 
 class Summary(Enum):
     NONE = 0
     AVERAGE = 1
     SUM = 2
     COUNT = 3
+
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -420,20 +456,25 @@ class AverageMeter(object):
 
 
 class ProgressMeter(object):
-    def __init__(self, num_batches, meters, prefix=""):
+    def __init__(self, num_batches, meters, prefix="", log=None):
         self.batch_fmtstr = self._get_batch_fmtstr(num_batches)
         self.meters = meters
         self.prefix = prefix
+        self.log = log
 
     def display(self, batch):
         entries = [self.prefix + self.batch_fmtstr.format(batch)]
         entries += [str(meter) for meter in self.meters]
         print('\t'.join(entries))
+        # self.log.logger.info('\t'.join(entries))
+        return '\t'.join(entries)
         
     def display_summary(self):
         entries = [" *"]
         entries += [meter.summary() for meter in self.meters]
         print(' '.join(entries))
+        # self.log.logger.info(' '.join(entries))
+        return ' '.join(entries)
 
     def _get_batch_fmtstr(self, num_batches):
         num_digits = len(str(num_batches // 1))
@@ -463,6 +504,20 @@ def accuracy(output, target, topk=(1,)):
             correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
             res.append(correct_k.mul_(100.0 / batch_size))
         return res
+
+
+class Logger(object):
+
+    def __init__(self, filename):
+        self.filename = filename
+        with open(self.filename, 'w') as f:
+            f.write('')
+
+    def log(self, string, isprint=True):
+        if isprint:
+            print(string)
+        with open(self.filename, 'a') as f:
+            f.write(str(string)+'\n')
 
 
 if __name__ == '__main__':

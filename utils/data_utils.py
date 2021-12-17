@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_loader(args):
-    if args.local_rank not in [-1, 0]:
-        torch.distributed.barrier()
+#     if args.local_rank not in [-1, 0]:
+#         torch.distributed.barrier()
 
     if args.dataset == 'CUB_200_2011':
         train_transform=transforms.Compose([transforms.Resize((600, 600), Image.BILINEAR),
@@ -100,8 +100,8 @@ def get_loader(args):
         trainset = INat2017(args.data_root, 'train', train_transform)
         testset = INat2017(args.data_root, 'val', test_transform)
 
-    if args.local_rank == 0:
-        torch.distributed.barrier()
+#     if args.local_rank == 0:
+#         torch.distributed.barrier()
 
     train_sampler = RandomSampler(trainset) if args.local_rank == -1 else DistributedSampler(trainset)
     test_sampler = SequentialSampler(testset) if args.local_rank == -1 else DistributedSampler(testset)

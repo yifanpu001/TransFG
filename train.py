@@ -304,7 +304,9 @@ def main():
                         help="Name of this run. Used for monitoring.")
     parser.add_argument("--dataset", choices=["CUB_200_2011", "car", "dog", "nabirds", "INat2017"], default="CUB_200_2011",
                         help="Which dataset.")
-    parser.add_argument('--data_root', type=str, default='/home/data/fine_grained')
+    parser.add_argument('--data_root', type=str, default='/root/data/public/')
+    parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
+                    help='number of data loading workers (default: 4)')
     parser.add_argument("--model_type", choices=["ViT-B_16", "ViT-B_32", "ViT-L_16",
                                                  "ViT-L_32", "ViT-H_14"],
                         default="ViT-B_16",
