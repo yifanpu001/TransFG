@@ -21,6 +21,7 @@ from apex.parallel import DistributedDataParallel as DDP
 # from torch.nn.parallel import DistributedDataParallel as DDP
 
 from models.modeling import VisionTransformer, CONFIGS
+from models.modeling_pure import VisionTransformer_pure, CONFIGS_pure
 from utils.scheduler import WarmupLinearSchedule, WarmupCosineSchedule
 from utils.data_utils import get_loader
 from utils.dist_util import get_world_size
@@ -55,7 +56,7 @@ def reduce_mean(tensor, nprocs):
 
 def save_model(args, model):
     model_to_save = model.module if hasattr(model, 'module') else model
-    model_checkpoint = os.path.join(args.output_dir, "%s_checkpoint.bin" % args.name)
+    model_checkpoint = os.path.join(args.output_dir, "checkpoint.bin")
     if args.fp16:
         checkpoint = {
             'model': model_to_save.state_dict(),
@@ -85,7 +86,10 @@ def setup(args):
     elif args.dataset == "INat2017":
         num_classes = 5089
 
-    model = VisionTransformer(config, args.img_size, zero_head=True, num_classes=num_classes, smoothing_value=args.smoothing_value)
+    if args.arch_type == "Pure":
+        model = VisionTransformer_pure(config, args.img_size, zero_head=True, num_classes=num_classes, smoothing_value=args.smoothing_value)
+    elif args.arch_type == "TransFG":
+        model = VisionTransformer(config, args.img_size, zero_head=True, num_classes=num_classes, smoothing_value=args.smoothing_value)
 
     model.load_from(np.load(args.pretrained_dir))
     if args.pretrained_model is not None:
@@ -110,10 +114,20 @@ def set_seed(args):
     if args.n_gpu > 0:
         torch.cuda.manual_seed_all(args.seed)
 
+def estimated_time(t_start, cur_step, total_step):
+    t_curr = time.time()
+    eta_total = (t_curr - t_start) / (cur_step + 1) * (total_step - cur_step - 1)
+    eta_hour = int(eta_total // 3600)
+    eta_min = int((eta_total - eta_hour * 3600) // 60)
+    eta_sec = int(eta_total - eta_hour * 3600 - eta_min * 60)
+    # args.print_custom(f'[INFO] Finished epoch:{epoch:02d};  ETA {eta_hour:02d} h {eta_min:02d} m {eta_sec:02d} s')
+    return f'Finished iter:{cur_step:05d}/{total_step:05d};  ETA {eta_hour:02d} h {eta_min:02d} m {eta_sec:02d} s'
+
 def valid(args, model, writer, test_loader, global_step):
     # Validation!
     eval_losses = AverageMeter()
 
+    logger.info("\n\n")
     logger.info("***** Running Validation *****")
     logger.info("  Num steps = %d", len(test_loader))
     logger.info("  Batch size = %d", args.eval_batch_size)
@@ -157,7 +171,6 @@ def valid(args, model, writer, test_loader, global_step):
     val_accuracy = reduce_mean(accuracy, args.nprocs)
     val_accuracy = val_accuracy.detach().cpu().numpy()
 
-    logger.info("\n")
     logger.info("Validation Results")
     logger.info("Global Steps: %d" % global_step)
     logger.info("Valid Loss: %2.5f" % eval_losses.avg)
@@ -165,7 +178,7 @@ def valid(args, model, writer, test_loader, global_step):
     if args.local_rank in [-1, 0]:
         writer.add_scalar("test/accuracy", scalar_value=val_accuracy, global_step=global_step)
         with open(f"{args.output_dir}/val_acc.txt", 'a') as f:
-            f.write(f"{global_step:05d}, {val_accuracy:6.4f}\n")
+            f.write(f"{global_step:05d}, {eval_losses.avg:2.5f}, {val_accuracy:6.4f},\n")
         
     return val_accuracy
 
@@ -173,7 +186,7 @@ def train(args, model):
     """ Train the model """
     if args.local_rank in [-1, 0]:
         os.makedirs(args.output_dir, exist_ok=True)
-    writer = SummaryWriter(log_dir=os.path.join("logs", args.name))
+    writer = SummaryWriter(log_dir=os.path.join(args.output_dir, "tensorboardlog"))
 
     args.train_batch_size = args.train_batch_size // args.gradient_accumulation_steps
 
@@ -287,6 +300,7 @@ def train(args, model):
         train_accuracy = reduce_mean(accuracy, args.nprocs)
         train_accuracy = train_accuracy.detach().cpu().numpy()
         logger.info("train accuracy so far: %f" % train_accuracy)
+        logger.info(estimated_time(start_time, global_step, t_total))
         losses.reset()
         if global_step % t_total == 0:
             break
@@ -307,6 +321,8 @@ def main():
     parser.add_argument('--data_root', type=str, default='/root/data/public/')
     parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
+    parser.add_argument("--arch_type", choices=["Pure", "TransFG"],
+                        help="Pure ViT or TransFG")
     parser.add_argument("--model_type", choices=["ViT-B_16", "ViT-B_32", "ViT-L_16",
                                                  "ViT-L_32", "ViT-H_14"],
                         default="ViT-B_16",
@@ -364,6 +380,7 @@ def main():
     parser.add_argument('--slide_step', type=int, default=12,
                         help="Slide step for overlap split")
 
+    parser.add_argument('--round', type=int, help="repeat same hyperparameter round")
     args = parser.parse_args()
 
     # if args.fp16 and args.smoothing_value != 0:
@@ -382,10 +399,17 @@ def main():
     args.device = device
     args.nprocs = torch.cuda.device_count()
 
+    # Setup save path
+    args.output_dir = os.path.join('/root/share/TransFG/output', args.output_dir,
+        f'arch{args.arch_type}_{args.dataset}_{args.model_type}_bs{args.train_batch_size}_lr{args.learning_rate}_wd{args.weight_decay}_nsteps{args.num_steps}_wmsteps{args.warmup_steps}_round{args.round}/')
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
+
     # Setup logging
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
-                        level=logging.INFO if args.local_rank in [-1, 0] else logging.WARN)
+                        level=logging.INFO if args.local_rank in [-1, 0] else logging.WARN,
+                        filename=os.path.join(args.output_dir, 'screen_output.log'))
     logger.warning("Process rank: %s, device: %s, n_gpu: %s, distributed training: %s, 16-bits training: %s" %
                    (args.local_rank, args.device, args.n_gpu, bool(args.local_rank != -1), args.fp16))
 

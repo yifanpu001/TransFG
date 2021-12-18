@@ -241,49 +241,23 @@ class Block(nn.Module):
             self.ffn_norm.bias.copy_(np2th(weights[pjoin(ROOT, MLP_NORM, "bias")]))
 
 
-class Part_Attention(nn.Module):
-    def __init__(self):
-        super(Part_Attention, self).__init__()
-
-    def forward(self, x):
-        length = len(x)
-        last_map = x[0]
-        for i in range(1, length):
-            last_map = torch.matmul(x[i], last_map)
-        last_map = last_map[:,:,0,1:]
-
-        _, max_inx = last_map.max(2)
-        return _, max_inx
-
-
 class Encoder(nn.Module):
     def __init__(self, config):
         super(Encoder, self).__init__()
         self.layer = nn.ModuleList()
-        for _ in range(config.transformer["num_layers"] - 1):
+        self.encoder_norm = LayerNorm(config.hidden_size, eps=1e-6)
+        for _ in range(config.transformer["num_layers"]):
             layer = Block(config)
             self.layer.append(copy.deepcopy(layer))
-        self.part_select = Part_Attention()
-        self.part_layer = Block(config)
-        self.part_norm = LayerNorm(config.hidden_size, eps=1e-6)
 
     def forward(self, hidden_states):
         attn_weights = []
-        for layer in self.layer:
-            hidden_states, weights = layer(hidden_states)
-            attn_weights.append(weights)            
-        part_num, part_inx = self.part_select(attn_weights)
-        part_inx = part_inx + 1
-        parts = []
-        B, num = part_inx.shape
-        for i in range(B):
-            parts.append(hidden_states[i, part_inx[i,:]])
-        parts = torch.stack(parts).squeeze(1)
-        concat = torch.cat((hidden_states[:,0].unsqueeze(1), parts), dim=1)
-        part_states, part_weights = self.part_layer(concat)
-        part_encoded = self.part_norm(part_states)   
+        for layer_block in self.layer:
+            hidden_states, weights = layer_block(hidden_states)
+            attn_weights.append(weights)
+        encoded = self.encoder_norm(hidden_states)
+        return encoded
 
-        return part_encoded
 
 class Transformer(nn.Module):
     def __init__(self, config, img_size):
@@ -293,44 +267,49 @@ class Transformer(nn.Module):
 
     def forward(self, input_ids):
         embedding_output = self.embeddings(input_ids)
-        part_encoded = self.encoder(embedding_output)
-        return part_encoded
+        encoded = self.encoder(embedding_output)
+        return encoded
 
 
-class VisionTransformer(nn.Module):
+class VisionTransformer_pure(nn.Module):
     def __init__(self, config, img_size=224, num_classes=21843, smoothing_value=0, zero_head=False):
-        super(VisionTransformer, self).__init__()
+        super(VisionTransformer_pure, self).__init__()
         self.num_classes = num_classes
         self.smoothing_value = smoothing_value
         self.zero_head = zero_head
         self.classifier = config.classifier
 
         self.transformer = Transformer(config, img_size)
-        self.part_head = Linear(config.hidden_size, num_classes)
+        self.head = Linear(config.hidden_size, num_classes)
 
     def forward(self, x, labels=None):
-        part_tokens = self.transformer(x)
-        part_logits = self.part_head(part_tokens[:, 0])
+        x = self.transformer(x)
+        logits = self.head(x[:, 0])
 
         if labels is not None:
             if self.smoothing_value == 0:
                 loss_fct = CrossEntropyLoss()
             else:
                 loss_fct = LabelSmoothing(self.smoothing_value)
-            part_loss = loss_fct(part_logits.view(-1, self.num_classes), labels.view(-1))
-            contrast_loss = con_loss(part_tokens[:, 0], labels.view(-1))
-            loss = part_loss + contrast_loss
-            return loss, part_logits
+            loss = loss_fct(logits.view(-1, self.num_classes), labels.view(-1))
+            return loss, logits
         else:
-            return part_logits
+            return logits
 
     def load_from(self, weights):
         with torch.no_grad():
+            if self.zero_head:
+                nn.init.zeros_(self.head.weight)
+                nn.init.zeros_(self.head.bias)
+            else:
+                self.head.weight.copy_(np2th(weights["head/kernel"]).t())
+                self.head.bias.copy_(np2th(weights["head/bias"]).t())
+
             self.transformer.embeddings.patch_embeddings.weight.copy_(np2th(weights["embedding/kernel"], conv=True))
             self.transformer.embeddings.patch_embeddings.bias.copy_(np2th(weights["embedding/bias"]))
             self.transformer.embeddings.cls_token.copy_(np2th(weights["cls"]))
-            self.transformer.encoder.part_norm.weight.copy_(np2th(weights["Transformer/encoder_norm/scale"]))
-            self.transformer.encoder.part_norm.bias.copy_(np2th(weights["Transformer/encoder_norm/bias"]))
+            self.transformer.encoder.encoder_norm.weight.copy_(np2th(weights["Transformer/encoder_norm/scale"]))
+            self.transformer.encoder.encoder_norm.bias.copy_(np2th(weights["Transformer/encoder_norm/bias"]))
 
             posemb = np2th(weights["Transformer/posembed_input/pos_embedding"])
             posemb_new = self.transformer.embeddings.position_embeddings
@@ -358,9 +337,8 @@ class VisionTransformer(nn.Module):
                 self.transformer.embeddings.position_embeddings.copy_(np2th(posemb))
 
             for bname, block in self.transformer.encoder.named_children():
-                if bname.startswith('part') == False:
-                    for uname, unit in block.named_children():
-                        unit.load_from(weights, n_block=uname)
+                for uname, unit in block.named_children():
+                    unit.load_from(weights, n_block=uname)
 
             if self.transformer.embeddings.hybrid:
                 self.transformer.embeddings.hybrid_model.root.conv.weight.copy_(np2th(weights["conv_root/kernel"], conv=True))
@@ -371,22 +349,10 @@ class VisionTransformer(nn.Module):
 
                 for bname, block in self.transformer.embeddings.hybrid_model.body.named_children():
                     for uname, unit in block.named_children():
-                        unit.load_from(weights, n_block=bname, n_unit=uname) 
+                        unit.load_from(weights, n_block=bname, n_unit=uname)
 
-def con_loss(features, labels):
-    B, _ = features.shape
-    features = F.normalize(features)
-    cos_matrix = features.mm(features.t())
-    pos_label_matrix = torch.stack([labels == labels[i] for i in range(B)]).float()
-    neg_label_matrix = 1 - pos_label_matrix
-    pos_cos_matrix = 1 - cos_matrix
-    neg_cos_matrix = cos_matrix - 0.4
-    neg_cos_matrix[neg_cos_matrix < 0] = 0
-    loss = (pos_cos_matrix * pos_label_matrix).sum() + (neg_cos_matrix * neg_label_matrix).sum()
-    loss /= (B * B)
-    return loss
 
-CONFIGS = {
+CONFIGS_pure = {
     'ViT-B_16': configs.get_b16_config(),
     'ViT-B_32': configs.get_b32_config(),
     'ViT-L_16': configs.get_l16_config(),
