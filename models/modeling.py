@@ -68,7 +68,6 @@ class LabelSmoothing(nn.Module):
         return loss.mean()
 
 
-
 class Attention(nn.Module):
     def __init__(self, config):
         super(Attention, self).__init__()
