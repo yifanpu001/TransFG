@@ -18,7 +18,7 @@ from torch.nn import CrossEntropyLoss, Dropout, Softmax, Linear, Conv2d, LayerNo
 from torch.nn.modules.utils import _pair
 from scipy import ndimage
 
-import models.configs as configs
+import exp02_models.configs as configs
 
 
 logger = logging.getLogger(__name__)
@@ -281,12 +281,12 @@ class VisionTransformer_pure(nn.Module):
         self.transformer = Transformer(config, img_size)
         # self.head = Linear(config.hidden_size, num_classes)
         patch_size = _pair(config.patches["size"])
-        n_patches = (img_size[0] // patch_size[0]) * (img_size[1] // patch_size[1])
-        self.head = Linear(n_patches + 1, num_classes)
+        n_patches = (img_size // patch_size[0]) * (img_size // patch_size[1])
+        self.head = Linear(int((n_patches + 1) * (n_patches + 2) / 2), num_classes)
 
     def forward(self, x, labels=None):
         x = self.transformer(x)  # [bs, 3, 448, 448] --> [bs, num_tokens, hidden_size]
-        x = torch.bmm(x, x)      # [bs, num_tokens, hidden_size] @ [bs, num_tokens, hidden_size] --> [bs, num_tokens, num_tokens]
+        x = torch.bmm(x, x.transpose(1, 2))      # [bs, num_tokens, hidden_size] @ [bs, num_tokens, hidden_size] --> [bs, num_tokens, num_tokens]
         tril_indices = torch.tril_indices(x.shape[1], x.shape[1])
         x = x[:, tril_indices[0], tril_indices[1]]  # [bs, num_tokens, num_tokens] --> [bs, (num_tokens+1) * hidden_size / 2]
         logits = self.head(x)

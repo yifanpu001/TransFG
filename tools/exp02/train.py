@@ -20,11 +20,11 @@ from apex.parallel import DistributedDataParallel as DDP
 # import torch.cuda.amp as amp
 # from torch.nn.parallel import DistributedDataParallel as DDP
 
-from models.modeling import VisionTransformer, CONFIGS
-from models.modeling_pure import VisionTransformer_pure, CONFIGS_pure
-from utils.scheduler import WarmupLinearSchedule, WarmupCosineSchedule
-from utils.data_utils import get_loader
-from utils.dist_util import get_world_size
+from exp02_models.modeling import VisionTransformer, CONFIGS
+from exp02_models.modeling_pure import VisionTransformer_pure, CONFIGS_pure
+from exp02_utils.scheduler import WarmupLinearSchedule, WarmupCosineSchedule
+from exp02_utils.data_utils import get_loader
+from exp02_utils.dist_util import get_world_size
 
 logger = logging.getLogger(__name__)
 
