@@ -325,7 +325,7 @@ class VisionTransformer_pure(nn.Module):
                               labels.view(N, 1, 1)
                               .expand(N, C, A))
 
-        CV_temp = cv_matrix[labels]
+        CV_temp = cv_matrix[labels].half()
 
         # sigma2 = ratio * \
         #          torch.bmm(torch.bmm(NxW_ij - NxW_kj,
