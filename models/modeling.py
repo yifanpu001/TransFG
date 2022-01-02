@@ -308,8 +308,8 @@ class VisionTransformer(nn.Module):
         self.part_head = Linear(config.hidden_size, num_classes)
 
     def forward(self, x, labels=None):
-        part_tokens = self.transformer(x)
-        part_logits = self.part_head(part_tokens[:, 0])
+        part_tokens = self.transformer(x)  # use non-overlap as an example, part_tokens.shape = [16, 13, 768]
+        part_logits = self.part_head(part_tokens[:, 0])  # part_tokens[:, 0].shape = [16, 768]
 
         if labels is not None:
             if self.smoothing_value == 0:
@@ -317,7 +317,7 @@ class VisionTransformer(nn.Module):
             else:
                 loss_fct = LabelSmoothing(self.smoothing_value)
             part_loss = loss_fct(part_logits.view(-1, self.num_classes), labels.view(-1))
-            contrast_loss = con_loss(part_tokens[:, 0], labels.view(-1))
+            contrast_loss = con_loss(part_tokens[:, 0], labels.view(-1))  # part_tokens[:, 0].shape = [16, 768], labels.view(-1).shape = [16]
             loss = part_loss + contrast_loss
             return loss, part_logits
         else:
@@ -373,13 +373,13 @@ class VisionTransformer(nn.Module):
                         unit.load_from(weights, n_block=bname, n_unit=uname) 
 
 def con_loss(features, labels):
-    B, _ = features.shape
-    features = F.normalize(features)
-    cos_matrix = features.mm(features.t())
-    pos_label_matrix = torch.stack([labels == labels[i] for i in range(B)]).float()
-    neg_label_matrix = 1 - pos_label_matrix
-    pos_cos_matrix = 1 - cos_matrix
-    neg_cos_matrix = cos_matrix - 0.4
+    B, _ = features.shape  # int B = 16
+    features = F.normalize(features)  # [16, 768] --> [16, 768]
+    cos_matrix = features.mm(features.t())  # [16, 768] x [768, 16] --> [16, 16]
+    pos_label_matrix = torch.stack([labels == labels[i] for i in range(B)]).float()  # pos_label_matrix.shape = [16, 16]
+    neg_label_matrix = 1 - pos_label_matrix                                          # neg_label_matrix.shape = [16, 16]
+    pos_cos_matrix = 1 - cos_matrix                                                  # pos_cos_matrix.shape = [16, 16]
+    neg_cos_matrix = cos_matrix - 0.4                                                # neg_cos_matrix.shape = [16, 16]
     neg_cos_matrix[neg_cos_matrix < 0] = 0
     loss = (pos_cos_matrix * pos_label_matrix).sum() + (neg_cos_matrix * neg_label_matrix).sum()
     loss /= (B * B)
