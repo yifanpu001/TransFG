@@ -332,6 +332,8 @@ def main():
                         help="Where to search for pretrained ViT models.")
     parser.add_argument("--pretrained_model", type=str, default=None,
                         help="load pretrained model")
+    parser.add_argument("--output_dir_root", default="/root/share/TransFG/output", type=str,
+                        help="output_dir's root")
     parser.add_argument("--output_dir", default="./output", type=str,
                         help="The output directory where checkpoints will be written.")
     parser.add_argument("--img_size", default=448, type=int,
@@ -406,7 +408,7 @@ def main():
     args.nprocs = torch.cuda.device_count()
 
     # Setup save path
-    args.output_dir = os.path.join('/root/share/TransFG/output', args.output_dir,
+    args.output_dir = os.path.join(args.output_dir_root, args.output_dir,
         f'arch{args.arch_type}_{args.dataset}_{args.model_type}_bs{args.train_batch_size}_lr{args.learning_rate}_wd{args.weight_decay}_nsteps{args.num_steps}_wmsteps{args.warmup_steps}_{args.split}_lbd{args.lambda_0}_round{args.round}/')
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
