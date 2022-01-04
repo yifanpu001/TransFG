@@ -91,7 +91,7 @@ def setup(args):
     elif args.arch_type == "TransFG":
         model = VisionTransformer(config, args.img_size, zero_head=True, num_classes=num_classes, smoothing_value=args.smoothing_value)
 
-    model.load_from(np.load(args.pretrained_dir))
+    model.load_from(np.load(os.path.join(args.output_dir_root, args.pretrained_dir)))
     if args.pretrained_model is not None:
         pretrained_model = torch.load(args.pretrained_model)['model']
         model.load_state_dict(pretrained_model)
@@ -331,6 +331,8 @@ def main():
                         help="Where to search for pretrained ViT models.")
     parser.add_argument("--pretrained_model", type=str, default=None,
                         help="load pretrained model")
+    parser.add_argument("--output_dir_root", default="/root/share/TransFG/output", type=str,
+                        help="output_dir's root")
     parser.add_argument("--output_dir", default="./output", type=str,
                         help="The output directory where checkpoints will be written.")
     parser.add_argument("--img_size", default=448, type=int,
@@ -400,7 +402,7 @@ def main():
     args.nprocs = torch.cuda.device_count()
 
     # Setup save path
-    args.output_dir = os.path.join('/root/share/TransFG/output', args.output_dir,
+    args.output_dir = os.path.join(args.output_dir_root, args.output_dir,
         f'arch{args.arch_type}_{args.dataset}_{args.model_type}_bs{args.train_batch_size}_lr{args.learning_rate}_wd{args.weight_decay}_nsteps{args.num_steps}_wmsteps{args.warmup_steps}_round{args.round}/')
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
