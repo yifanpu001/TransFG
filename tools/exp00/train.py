@@ -403,7 +403,7 @@ def main():
 
     # Setup save path
     args.output_dir = os.path.join(args.output_dir_root, args.output_dir,
-        f'arch{args.arch_type}_{args.dataset}_{args.model_type}_bs{args.train_batch_size}_lr{args.learning_rate}_wd{args.weight_decay}_nsteps{args.num_steps}_wmsteps{args.warmup_steps}_round{args.round}/')
+        f'arch{args.arch_type}_{args.dataset}_{args.model_type}_bs{args.train_batch_size}_lr{args.learning_rate}_wd{args.weight_decay}_nsteps{args.num_steps}_wmsteps{args.warmup_steps}_{args.split}_round{args.round}/')
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
 
