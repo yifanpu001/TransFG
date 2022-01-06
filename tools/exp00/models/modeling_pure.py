@@ -270,9 +270,9 @@ class Transformer(nn.Module):
         return encoded
 
 
-class VisionTransformer_pure(nn.Module):
+class VisionTransformer(nn.Module):
     def __init__(self, config, img_size=224, num_classes=21843, smoothing_value=0, zero_head=False):
-        super(VisionTransformer_pure, self).__init__()
+        super(VisionTransformer, self).__init__()
         self.num_classes = num_classes
         self.smoothing_value = smoothing_value
         self.zero_head = zero_head
@@ -351,7 +351,7 @@ class VisionTransformer_pure(nn.Module):
                         unit.load_from(weights, n_block=bname, n_unit=uname)
 
 
-CONFIGS_pure = {
+CONFIGS = {
     'ViT-B_16': configs.get_b16_config(),
     'ViT-B_32': configs.get_b32_config(),
     'ViT-L_16': configs.get_l16_config(),
