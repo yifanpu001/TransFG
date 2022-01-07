@@ -100,11 +100,15 @@ def get_loader(args):
         trainset = INat2017(args.data_root, 'train', train_transform)
         testset = INat2017(args.data_root, 'val', test_transform)
 
-#     if args.local_rank == 0:
-#         torch.distributed.barrier()
+    #     if args.local_rank == 0:
+    #         torch.distributed.barrier()
 
-    train_sampler = RandomSampler(trainset) if args.local_rank == -1 else DistributedSampler(trainset)
-    test_sampler = SequentialSampler(testset) if args.local_rank == -1 else DistributedSampler(testset)
+    # train_sampler = RandomSampler(trainset) if args.local_rank == -1 else DistributedSampler(trainset)
+    # test_sampler = SequentialSampler(testset) if args.local_rank == -1 else DistributedSampler(testset)
+
+    train_sampler = torch.utils.data.distributed.DistributedSampler(trainset)
+    test_sampler = torch.utils.data.distributed.DistributedSampler(testset)
+
     train_loader = DataLoader(trainset,
                               sampler=train_sampler,
                               batch_size=args.train_batch_size,

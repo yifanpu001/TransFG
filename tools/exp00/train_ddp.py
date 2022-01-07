@@ -1,6 +1,12 @@
 # coding=utf-8
 from __future__ import absolute_import, division, print_function
 
+import hf_env
+hf_env.set_env('202105')
+import pickle
+from ffrecord.torch import Dataset, DataLoader
+
+
 import logging
 import argparse
 import os
@@ -87,11 +93,13 @@ class ProgressMeter(object):
         entries = [self.prefix + self.batch_fmtstr.format(batch)]
         entries += [str(meter) for meter in self.meters]
         print('\t'.join(entries))
+        logger.info('\t'.join(entries))
         
     def display_summary(self):
         entries = [" *"]
         entries += [meter.summary() for meter in self.meters]
         print(' '.join(entries))
+        logger.info(' '.join(entries))
 
     def _get_batch_fmtstr(self, num_batches):
         num_digits = len(str(num_batches // 1))
@@ -124,21 +132,20 @@ def count_parameters(model):
 def get_args():
     parser = argparse.ArgumentParser()
     # Required parameters
-    parser.add_argument("--name", required=True,
-                        help="Name of this run. Used for monitoring.")
+    # parser.add_argument("--name", required=True,
+    #                     help="Name of this run. Used for monitoring.")
     parser.add_argument("--dataset", choices=["CUB_200_2011", "car", "dog", "nabirds", "INat2017"], default="CUB_200_2011",
                         help="Which dataset.")
-    parser.add_argument('--data_root', type=str, default='/root/data/public/')
+    parser.add_argument('--data_root', type=str, default='/root/data/public/',
+                    help='/ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets for HF')
     parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-    parser.add_argument("--arch_type", choices=["Pure", "TransFG"],
-                        help="Pure ViT or TransFG")
     parser.add_argument("--model_type", choices=["ViT-B_16", "ViT-B_32", "ViT-L_16",
                                                  "ViT-L_32", "ViT-H_14"],
                         default="ViT-B_16",
                         help="Which variant to use.")
     parser.add_argument("--pretrained_dir", type=str, default="/opt/tiger/minist/ViT-B_16.npz",
-                        help="Where to search for pretrained ViT models.")
+                        help="Where to search for pretrained ViT models.   'logs/pretrained_ViT/imagenet21k_ViT-B_16.npz' for HF")
     parser.add_argument("--pretrained_model", type=str, default=None,
                         help="load pretrained model")
     parser.add_argument("--output_dir_root", default="/root/share/TransFG/output", type=str,
@@ -151,38 +158,21 @@ def get_args():
                         help="Total batch size for training.")
     parser.add_argument("--eval_batch_size", default=8, type=int,
                         help="Total batch size for eval.")
-    parser.add_argument("--eval_every", default=100, type=int,
-                        help="Run prediction on validation set every so many steps."
-                             "Will always run one evaluation at the end of training.")
-
     parser.add_argument("--learning_rate", default=3e-2, type=float,
                         help="The initial learning rate for SGD.")
     parser.add_argument("--weight_decay", default=0, type=float,
                         help="Weight deay if we apply some.")
-    parser.add_argument("--num_steps", default=10000, type=int,
-                        help="Total number of training epochs to perform.")
-    parser.add_argument("--decay_type", choices=["cosine", "linear"], default="cosine",
-                        help="How to decay the learning rate.")
-    parser.add_argument("--warmup_steps", default=500, type=int,
+    parser.add_argument('--epochs', default=100, type=int, metavar='N',
+                    help='number of total epochs to run')
+    parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
+                    help='manual epoch number (useful on restarts)')
+    parser.add_argument("--warmup_epochs", default=5, type=int,
                         help="Step of training to perform learning rate warmup for.")
-    parser.add_argument("--max_grad_norm", default=1.0, type=float,
-                        help="Max gradient norm.")
 
     parser.add_argument("--local_rank", type=int, default=-1,
                         help="local_rank for distributed training on gpus")
     parser.add_argument('--seed', type=int, default=42,
                         help="random seed for initialization")
-    parser.add_argument('--gradient_accumulation_steps', type=int, default=1,
-                        help="Number of updates steps to accumulate before performing a backward/update pass.")
-    parser.add_argument('--fp16', action='store_true',
-                        help="Whether to use 16-bit float precision instead of 32-bit")
-    parser.add_argument('--fp16_opt_level', type=str, default='O2',
-                        help="For fp16: Apex AMP optimization level selected in ['O0', 'O1', 'O2', and 'O3']."
-                             "See details at https://nvidia.github.io/apex/amp.html")
-    parser.add_argument('--loss_scale', type=float, default=0,
-                        help="Loss scaling to improve fp16 numeric stability. Only used when fp16 set to True.\n"
-                             "0 (default value): dynamic loss scaling.\n"
-                             "Positive power of 2: static loss scaling value.\n")
 
     parser.add_argument('--smoothing_value', type=float, default=0.0,
                         help="Label smoothing value\n")
@@ -193,6 +183,10 @@ def get_args():
                         help="Slide step for overlap split")
 
     parser.add_argument('--round', type=int, help="repeat same hyperparameter round")
+
+    # not important
+    parser.add_argument('-p', '--print-freq', default=10, type=int,
+                    metavar='N', help='print frequency (default: 10)')
     args = parser.parse_args()
     return args
 
@@ -244,7 +238,7 @@ def main():
     args.output_dir = os.path.join(
         args.output_dir_root,
         args.output_dir,
-        f'arch{args.arch_type}_{args.dataset}_{args.model_type}_bs{args.train_batch_size}_lr{args.learning_rate}_wd{args.weight_decay}_nsteps{args.num_steps}_wmsteps{args.warmup_steps}_{args.split}_round{args.round}/'
+        f'{args.dataset}_{args.model_type}_bs{args.train_batch_size}_lr{args.learning_rate}_wd{args.weight_decay}_epochs{args.epochs}_wmsteps{args.warmup_steps}_{args.split}_round{args.round}/'
     )
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
@@ -286,7 +280,7 @@ def main_worker(gpu, ngpus_per_node, args):
     args, model = setup_model(args)
 
     # DistributedDataParallel
-    args.batch_size = int(args.batch_size / args.ngpus_per_node)
+    args.train_batch_size = int(args.train_batch_size / args.ngpus_per_node)
     args.workers = int((args.workers + args.ngpus_per_node - 1) / args.ngpus_per_node)
     torch.cuda.set_device(args.gpu)
     model.cuda(args.gpu)
@@ -299,7 +293,7 @@ def main_worker(gpu, ngpus_per_node, args):
                                 weight_decay=args.weight_decay)
 
     # Prepare scheduler
-    scheduler = WarmupCosineSchedule(optimizer, warmup_steps=args.warmup_steps, t_total=t_total)
+    scheduler = WarmupCosineSchedule(optimizer, warmup_steps=args.warmup_steps, t_total=args.epochs)
 
     cudnn.benchmark = True
 
@@ -308,12 +302,6 @@ def main_worker(gpu, ngpus_per_node, args):
 
     # Start Train
     logger.info("***** Running training *****")
-    logger.info("  Total optimization steps = %d", args.num_steps)
-    logger.info("  Instantaneous batch size per GPU = %d", args.train_batch_size)
-    logger.info("  Total train batch size (w. parallel, distributed & accumulation) = %d",
-                args.train_batch_size * args.gradient_accumulation_steps * (
-                    torch.distributed.get_world_size() if args.local_rank != -1 else 1))
-    logger.info("  Gradient Accumulation steps = %d", args.gradient_accumulation_steps)
     
     set_seed(args)  # Added here for reproducibility (even between python 2 and 3)
     for epoch in range(args.start_epoch, args.epochs):
@@ -344,9 +332,9 @@ def train(train_loader, model, scheduler, optimizer, epoch, args):
         data_time.update(time.time() - end)
 
         # compute output
-        loss, logits = model(images)
+        loss, logits = model(images, target)
         loss = loss.mean()
-        preds = torch.argmax(logits, dim=-1)
+        preds = logits
 
         # measure accuracy and record loss
         acc1, acc5 = accuracy(preds, target, topk=(1, 5))
@@ -355,16 +343,16 @@ def train(train_loader, model, scheduler, optimizer, epoch, args):
         top5.update(acc5[0], images.size(0))
 
         # compute gradient and do SGD step
-        scheduler.step()
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        scheduler.step()
 
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if i % args.print_freq == 0:
+        if (i % args.print_freq == 0) and args.is_main_proc:
             progress.display(i)
 
 
@@ -388,12 +376,20 @@ def validate(val_loader, model, args):
             target = target.cuda(args.gpu, non_blocking=True)
 
             # compute output
-            loss, logits = model(images)
+            loss, logits = model(images, target)
             loss = loss.mean()
-            preds = torch.argmax(logits, dim=-1)
+            preds = logits
 
             # measure accuracy and record loss
             acc1, acc5 = accuracy(preds, target, topk=(1, 5))
+
+            dist.all_reduce(acc1)
+            acc1 /= args.world_size
+            dist.all_reduce(acc5)
+            acc5 /= args.world_size
+            dist.all_reduce(loss)
+            loss /= args.world_size
+
             losses.update(loss.item(), images.size(0))
             top1.update(acc1[0], images.size(0))
             top5.update(acc5[0], images.size(0))
@@ -402,10 +398,11 @@ def validate(val_loader, model, args):
             batch_time.update(time.time() - end)
             end = time.time()
 
-            if i % args.print_freq == 0:
+            if (i % args.print_freq == 0) and args.is_main_proc:
                 progress.display(i)
-
-        progress.display_summary()
+        
+        if args.is_main_proc:
+            progress.display_summary()
 
     return top1.avg
 
