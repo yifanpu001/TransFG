@@ -283,7 +283,7 @@ class VisionTransformer(nn.Module):
 
     def forward(self, x, labels=None):
         x = self.transformer(x)
-        logits = self.head(x[:, 0])
+        logits = self.head(x[:, 0])  # logits.shape = [bs, num_class]
 
         if labels is not None:
             if self.smoothing_value == 0:

@@ -121,4 +121,4 @@ def get_loader(args):
                              num_workers=args.workers,
                              pin_memory=True) if testset is not None else None
 
-    return train_loader, test_loader
+    return train_loader, test_loader, train_sampler
