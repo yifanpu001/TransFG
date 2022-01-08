@@ -117,7 +117,7 @@ hfai python train.py \
 --dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
 --epochs 100 --warmup_epochs 5 \
 --split non-overlap --round 2 \
--- --nodes=1 --priority=40 --name=pyf_CUB_bsl_nonoverlap_r2 &\
+-- --nodes=1 --priority=10 --name=pyf_CUB_bsl_nonoverlap_r2 &\
 
 hfai python train.py \
 --output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp00/run02 \
@@ -126,7 +126,7 @@ hfai python train.py \
 --dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
 --epochs 100 --warmup_epochs 5 \
 --split non-overlap --round 3 \
--- --nodes=1 --priority=40 --name=pyf_CUB_bsl_nonoverlap_r3 &\
+-- --nodes=1 --priority=10 --name=pyf_CUB_bsl_nonoverlap_r3 &\
 
 # overlap
 hfai python train.py \
