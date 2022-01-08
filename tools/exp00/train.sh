@@ -103,7 +103,7 @@ hfai python train_ddp.py \
 # non-overlap
 hfai python train.py \
 --output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp00/run02 \
---model_type ViT-B_16 --pretrained_dir logs/pretrained_ViT/imagenet21k_ViT-B_16.npz \
+--model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
 --data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
 --dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
 --epochs 100 --warmup_epochs 5 \
@@ -112,7 +112,7 @@ hfai python train.py \
 
 hfai python train.py \
 --output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp00/run02 \
---model_type ViT-B_16 --pretrained_dir logs/pretrained_ViT/imagenet21k_ViT-B_16.npz \
+--model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
 --data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
 --dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
 --epochs 100 --warmup_epochs 5 \
@@ -121,7 +121,7 @@ hfai python train.py \
 
 hfai python train.py \
 --output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp00/run02 \
---model_type ViT-B_16 --pretrained_dir logs/pretrained_ViT/imagenet21k_ViT-B_16.npz \
+--model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
 --data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
 --dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
 --epochs 100 --warmup_epochs 5 \
@@ -131,7 +131,7 @@ hfai python train.py \
 # overlap
 hfai python train.py \
 --output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp00/run02 \
---model_type ViT-B_16 --pretrained_dir logs/pretrained_ViT/imagenet21k_ViT-B_16.npz \
+--model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
 --data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
 --dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
 --epochs 100 --warmup_epochs 5 \
@@ -140,7 +140,7 @@ hfai python train.py \
 
 hfai python train.py \
 --output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp00/run02 \
---model_type ViT-B_16 --pretrained_dir logs/pretrained_ViT/imagenet21k_ViT-B_16.npz \
+--model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
 --data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
 --dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
 --epochs 100 --warmup_epochs 5 \
@@ -149,7 +149,7 @@ hfai python train.py \
 
 hfai python train.py \
 --output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp00/run02 \
---model_type ViT-B_16 --pretrained_dir logs/pretrained_ViT/imagenet21k_ViT-B_16.npz \
+--model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
 --data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
 --dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
 --epochs 100 --warmup_epochs 5 \
