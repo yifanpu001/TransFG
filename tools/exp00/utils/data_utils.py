@@ -14,8 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 def get_loader(args):
-#     if args.local_rank not in [-1, 0]:
-#         torch.distributed.barrier()
 
     if args.dataset == 'CUB_200_2011':
         train_transform=transforms.Compose([transforms.Resize((600, 600), Image.BILINEAR),
