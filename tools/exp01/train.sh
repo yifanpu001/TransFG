@@ -512,7 +512,7 @@ hfai python train.py \
 --dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
 --epochs 100 --warmup_epochs 5 \
 --split overlap --lambda_0 8.0 --round 1 \
--- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd08x00_r1 &\
+-- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd008x00_r1 &\
 
 hfai python train.py \
 --output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01/run02 \
@@ -521,7 +521,7 @@ hfai python train.py \
 --dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
 --epochs 100 --warmup_epochs 5 \
 --split overlap --lambda_0 8.0 --round 2 \
--- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd08x00_r2 &\
+-- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd008x00_r2 &\
 
 hfai python train.py \
 --output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01/run02 \
@@ -530,7 +530,7 @@ hfai python train.py \
 --dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
 --epochs 100 --warmup_epochs 5 \
 --split overlap --lambda_0 8.0 --round 3 \
--- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd08x00_r3 &\
+-- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd008x00_r3 &\
 
 
 ## lbd=010.00
