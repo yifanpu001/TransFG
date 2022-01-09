@@ -156,7 +156,6 @@ def estimated_time(t_start, cur_epoch, start_epoch, total_epoch):
     eta_hour = int(eta_total // 3600)
     eta_min = int((eta_total - eta_hour * 3600) // 60)
     eta_sec = int(eta_total - eta_hour * 3600 - eta_min * 60)
-    # args.print_custom(f'[INFO] Finished epoch:{epoch:02d};  ETA {eta_hour:02d} h {eta_min:02d} m {eta_sec:02d} s')
     return f'Finished iter:{cur_epoch:05d}/{total_epoch:05d};  ETA {eta_hour:02d} h {eta_min:02d} m {eta_sec:02d} s'
 
 
@@ -254,7 +253,7 @@ def setup_model(args):
     elif args.dataset == "INat2017":
         num_classes = 5089
 
-    model = VisionTransformer(config, args.img_size, zero_head=True, num_classes=num_classes, smoothing_value=args.smoothing_value)
+    model = VisionTransformer(config, args.local_rank, args.img_size, zero_head=True, num_classes=num_classes, smoothing_value=args.smoothing_value)
 
     model.load_from(np.load(os.path.join(args.output_dir_root, args.pretrained_dir)))
 

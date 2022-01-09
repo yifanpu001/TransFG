@@ -271,7 +271,7 @@ class Transformer(nn.Module):
 
 
 class VisionTransformer(nn.Module):
-    def __init__(self, config, img_size=224, num_classes=21843, smoothing_value=0, zero_head=False):
+    def __init__(self, config, local_rank, img_size=224, num_classes=21843, smoothing_value=0, zero_head=False):
         super(VisionTransformer, self).__init__()
         self.num_classes = num_classes
         self.smoothing_value = smoothing_value
@@ -281,7 +281,7 @@ class VisionTransformer(nn.Module):
         self.transformer = Transformer(config, img_size)
         self.head = Linear(config.hidden_size, num_classes)
         # for ISDA
-        self.estimator = EstimatorCV(config.hidden_size, num_classes)
+        self.estimator = EstimatorCV(config.hidden_size, num_classes, local_rank)
         self.class_num = num_classes
         self.cross_entropy = nn.CrossEntropyLoss()
 
@@ -304,9 +304,6 @@ class VisionTransformer(nn.Module):
                 loss_fct = CrossEntropyLoss()
             else:
                 loss_fct = LabelSmoothing(self.smoothing_value)
-            # loss = loss_fct(logits.view(-1, self.num_classes), labels.view(-1))
-            print('xxxxxxx', isda_aug_y.shape)
-            print('yyyyyyy', labels.shape)
             loss = loss_fct(isda_aug_y, labels)
             return loss, logits
         else:
@@ -395,12 +392,12 @@ class VisionTransformer(nn.Module):
 
 
 class EstimatorCV():
-    def __init__(self, feature_num, class_num):
+    def __init__(self, feature_num, class_num, local_rank):
         super(EstimatorCV, self).__init__()
         self.class_num = class_num
-        self.CoVariance = torch.zeros(class_num, feature_num).cuda()
-        self.Ave = torch.zeros(class_num, feature_num).cuda()
-        self.Amount = torch.zeros(class_num).cuda()
+        self.CoVariance = torch.zeros(class_num, feature_num).cuda(local_rank)
+        self.Ave = torch.zeros(class_num, feature_num).cuda(local_rank)
+        self.Amount = torch.zeros(class_num).cuda(local_rank)
 
     def update_CV(self, features, labels):
         N = features.size(0)
