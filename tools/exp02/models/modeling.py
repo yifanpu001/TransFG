@@ -285,11 +285,12 @@ class VisionTransformer(nn.Module):
     def forward(self, x, labels=None, loss_type=None, gamma=0.0):
         x = self.transformer(x)
         logits = self.head(x[:, 0])  # logits.shape = [bs, num_class]
+        labels_one_hot = F.one_hot(labels, num_classes=self.num_classes).double()
 
         if labels is not None:
-            
+
             if loss_type == 'kl_me_1':
-                loss = F.kl_div(logits, labels, reduction='mean', log_target=True) - gamma * self.information_entropy(logits)
+                loss = F.kl_div(logits, labels_one_hot, reduction='mean', log_target=True) - gamma * self.information_entropy(logits)
             elif loss_type == 'ce_me':
                 loss = F.cross_entropy(logits, labels) - gamma * self.information_entropy(logits)
 

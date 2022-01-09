@@ -278,7 +278,7 @@ def main():
     args.output_dir = os.path.join(
         args.output_dir_root,
         args.output_dir,
-        f'{args.dataset}_{args.model_type}_bs{args.train_batch_size}_lr{args.lr}_wd{args.weight_decay}_epochs{args.epochs}_wmsteps{args.warmup_epochs}_{args.split}_loss{args.loss_type}_gamma{args.gamma:06.2f}_round{args.round}/'
+        f'{args.dataset}_{args.model_type}_bs{args.train_batch_size}_lr{args.lr}_wd{args.weight_decay}_epochs{args.epochs}_wmsteps{args.warmup_epochs}_{args.split}_loss{args.loss_type}_gamma{args.gamma:09.8f}_round{args.round}/'
     )
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
