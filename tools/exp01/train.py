@@ -399,6 +399,11 @@ def main_worker(local_rank, ngpus_per_node, args):
             )
 
             logger.info(estimated_time(start_time, epoch, args.start_epoch, args.epochs))
+            
+    # record final result
+    with open(args.output_dir + '/scores_final.csv', "a") as f:
+        f.write(f'epoch, lr, loss_train, acc1_train, loss_test, acc1_test, acc1_test_best,\n')
+        f.write(f"{epoch:3d}, {get_lr(optimizer):15.12f}, {loss_train:9.8f}, {acc1_train:6.3f}, {loss_test:9.8f}, {acc1_test:6.3f}, {best_acc1:6.3f},\n")
 
     writer.close()
     logger.info("Best Accuracy: \t%f" % best_acc1)
