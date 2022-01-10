@@ -248,6 +248,24 @@ hfai python train.py \
 --split overlap --lambda_0 0.1 --round 3 \
 -- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd000x10_r3 &\
 
+hfai python train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01/run02 \
+--model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--split overlap --lambda_0 0.1 --round 4 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd000x10_r4 &\
+
+hfai python train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01/run02 \
+--model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--split overlap --lambda_0 0.1 --round 5 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd000x10_r5 &\
+
 ## lbd=000.50
 hfai python train.py \
 --output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01/run02 \
@@ -275,6 +293,25 @@ hfai python train.py \
 --epochs 100 --warmup_epochs 5 \
 --split overlap --lambda_0 0.5 --round 3 \
 -- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd000x50_r3 &\
+
+hfai python train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01/run02 \
+--model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--split overlap --lambda_0 0.5 --round 4 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd000x50_r4 &\
+
+hfai python train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01/run02 \
+--model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--split overlap --lambda_0 0.5 --round 5 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd000x50_r5 &\
+
 
 ## lbd=001.00
 hfai python train.py \
@@ -304,6 +341,24 @@ hfai python train.py \
 --split overlap --lambda_0 1.0 --round 3 \
 -- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd001x00_r3 &\
 
+hfai python train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01/run02 \
+--model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--split overlap --lambda_0 1.0 --round 4 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd001x00_r4 &\
+
+hfai python train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01/run02 \
+--model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--split overlap --lambda_0 1.0 --round 5 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd001x00_r5 &\
+
 ## lbd=003.00
 hfai python train.py \
 --output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01/run02 \
@@ -331,6 +386,24 @@ hfai python train.py \
 --epochs 100 --warmup_epochs 5 \
 --split overlap --lambda_0 3.0 --round 3 \
 -- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd003x00_r3 &\
+
+hfai python train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01/run02 \
+--model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--split overlap --lambda_0 3.0 --round 4 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd003x00_r4 &\
+
+hfai python train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01/run02 \
+--model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--split overlap --lambda_0 3.0 --round 5 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd003x00_r5 &\
 
 ## lbd=005.00
 hfai python train.py \
@@ -415,6 +488,24 @@ hfai python train.py \
 --split overlap --lambda_0 7.0 --round 3 \
 -- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd007x00_r3 &\
 
+hfai python train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01/run02 \
+--model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--split overlap --lambda_0 7.0 --round 4 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd007x00_r4 &\
+
+hfai python train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01/run02 \
+--model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--split overlap --lambda_0 7.0 --round 5 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd007x00_r5 &\
+
 
 ## lbd=009.00
 hfai python train.py \
@@ -443,6 +534,24 @@ hfai python train.py \
 --epochs 100 --warmup_epochs 5 \
 --split overlap --lambda_0 9.0 --round 3 \
 -- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd009x00_r3 &\
+
+hfai python train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01/run02 \
+--model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--split overlap --lambda_0 9.0 --round 4 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd009x00_r4 &\
+
+hfai python train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01/run02 \
+--model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--split overlap --lambda_0 9.0 --round 5 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_e01_lbd009x00_r5 &\
 
 
 ## lbd=002.00
