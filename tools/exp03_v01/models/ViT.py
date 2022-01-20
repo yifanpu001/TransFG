@@ -284,18 +284,7 @@ class VisionTransformer(nn.Module):
     def forward(self, x):
         x = self.transformer(x)
         logits = self.head(x[:, 0])  # logits.shape = [bs, num_class]
-        
         return logits
-
-        if labels is not None:
-            if self.smoothing_value == 0:
-                loss_fct = CrossEntropyLoss()
-            else:
-                loss_fct = LabelSmoothing(self.smoothing_value)
-            loss = loss_fct(logits.view(-1, self.num_classes), labels.view(-1))
-            return loss, logits
-        else:
-            return logits
 
     def load_from(self, weights):
         with torch.no_grad():
