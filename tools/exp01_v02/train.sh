@@ -1,84 +1,441 @@
-CUDA_VISIBLE_DEVICES=0,1,2,3 /opt/conda/envs/transfg/bin/python -m torch.distributed.launch --nproc_per_node=4 train.py --output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir exp_00/debug1 --dataset CUB_200_2011 --train_batch_size 16 --workers 4 --arch_type TransFG --model_type ViT-B_16 --pretrained_dir logs/pretrained_ViT/imagenet21k_ViT-B_16.npz --split non-overlap --num_steps 10000 --eval_every 200 --fp16 --name sample_run --round 1 &
-
-
-######### run01
-# non-overlap
-hfai python tools/exp00_v02/train.py \
---output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp00_v02/run01 \
---model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
+# debug
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01_debug2 \
+--model_type resnet50 \
 --data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
---dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--dataset CUB_200_2011 --train_batch_size 8 --lr 3e-2 --workers 1 \
 --epochs 100 --warmup_epochs 5 \
---split non-overlap --round 1 \
--- --nodes=1 --priority=10 --name=pyf_CUB_bsl_nonoverlap_r1 &\
+--lambda_0 1.0 --round 1 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_bsl_e01v02_lbd1x0_r1 &\
 
-hfai python tools/exp00_v02/train.py \
---output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp00_v02/run01 \
---model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
---data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
---dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
---epochs 100 --warmup_epochs 5 \
---split non-overlap --round 2 \
--- --nodes=1 --priority=10 --name=pyf_CUB_bsl_nonoverlap_r2 &\
 
-hfai python tools/exp00_v02/train.py \
---output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp00_v02/run01 \
---model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
---data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
---dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
---epochs 100 --warmup_epochs 5 \
---split non-overlap --round 3 \
--- --nodes=1 --priority=10 --name=pyf_CUB_bsl_nonoverlap_r3 &\
 
-# overlap
-hfai python tools/exp00_v02/train.py \
---output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp00_v02/run01 \
---model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
---data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
---dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
---epochs 100 --warmup_epochs 5 \
---split overlap --round 1 \
--- --nodes=1 --priority=10 --name=pyf_CUB_bsl_overlap_r1 &\
-
-hfai python tools/exp00_v02/train.py \
---output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp00_v02/run01 \
---model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
---data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
---dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
---epochs 100 --warmup_epochs 5 \
---split overlap --round 2 \
--- --nodes=1 --priority=10 --name=pyf_CUB_bsl_overlap_r2 &\
-
-hfai python tools/exp00_v02/train.py \
---output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp00_v02/run01 \
---model_type ViT-B_16 --pretrained_dir pretrained_ViT/imagenet21k_ViT-B_16.npz \
---data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
---dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
---epochs 100 --warmup_epochs 5 \
---split overlap --round 3 \
--- --nodes=1 --priority=10 --name=pyf_CUB_bsl_overlap_r3 &\
-
-# resnet50
-hfai python tools/exp00_v02/train.py \
---output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp00_v02/run01 \
+# run01
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
 --model_type resnet50 \
 --data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
 --dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
---epochs 100 --warmup_epochs 5 --round 1 \
--- --nodes=1 --priority=10 --name=pyf_CUB_bsl_r50_r1 &\
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 0.1 --round 1 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd0x1_r1 &\
 
-hfai python tools/exp00_v02/train.py \
---output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp00_v02/run01 \
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
 --model_type resnet50 \
 --data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
 --dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
---epochs 100 --warmup_epochs 5 --round 2 \
--- --nodes=1 --priority=10 --name=pyf_CUB_bsl_r50_r2 &\
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 0.1 --round 2 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd0x1_r2 &\
 
-hfai python tools/exp00_v02/train.py \
---output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp00_v02/run01 \
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
 --model_type resnet50 \
 --data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
 --dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
---epochs 100 --warmup_epochs 5 --round 3 \
--- --nodes=1 --priority=10 --name=pyf_CUB_bsl_r50_r3 &\
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 0.1 --round 3 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd0x1_r3 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 0.1 --round 4 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd0x1_r4 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 0.1 --round 5 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd0x1_r5 &\
+
+
+
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 0.3 --round 1 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd0x3_r1 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 0.3 --round 2 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd0x3_r2 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 0.3 --round 3 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd0x3_r3 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 0.3 --round 4 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd0x3_r4 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 0.3 --round 5 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd0x3_r5 &\
+
+
+
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 0.5 --round 1 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd0x5_r1 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 0.5 --round 2 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd0x5_r2 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 0.5 --round 3 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd0x5_r3 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 0.5 --round 4 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd0x5_r4 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 0.5 --round 5 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd0x5_r5 &\
+
+
+
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 0.7 --round 1 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd0x7_r1 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 0.7 --round 2 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd0x7_r2 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 0.7 --round 3 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd0x7_r3 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 0.7 --round 4 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd0x7_r4 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 0.7 --round 5 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd0x7_r5 &\
+
+
+
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 1.0 --round 1 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd1x0_r1 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 1.0 --round 2 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd1x0_r2 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 1.0 --round 3 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd1x0_r3 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 1.0 --round 4 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd1x0_r4 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 1.0 --round 5 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd1x0_r5 &\
+
+
+
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 3.0 --round 1 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd3x0_r1 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 3.0 --round 2 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd3x0_r2 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 3.0 --round 3 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd3x0_r3 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 3.0 --round 4 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd3x0_r4 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 3.0 --round 5 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd3x0_r5 &\
+
+
+
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 5.0 --round 1 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd5x0_r1 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 5.0 --round 2 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd5x0_r2 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 5.0 --round 3 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd5x0_r3 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 5.0 --round 4 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd5x0_r4 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 5.0 --round 5 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd5x0_r5 &\
+
+
+
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 7.0 --round 1 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd7x0_r1 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 7.0 --round 2 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd7x0_r2 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 7.0 --round 3 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd7x0_r3 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 7.0 --round 4 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd7x0_r4 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 7.0 --round 5 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd7x0_r5 &\
+
+
+
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 7.0 --round 1 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd9x0_r1 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 7.0 --round 2 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd9x0_r2 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 7.0 --round 3 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd9x0_r3 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 7.0 --round 4 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd9x0_r4 &\
+
+hfai python tools/exp01_v02/train.py \
+--output_dir_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG --output_dir output/exp01_v02/run01 \
+--model_type resnet50 \
+--data_root /ceph-jd/pub/jupyter/pxr/notebooks/pyf/datasets \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
+--epochs 100 --warmup_epochs 5 \
+--lambda_0 9.0 --round 5 \
+-- --nodes=1 --priority=10 --name=pyf_CUB_r50_e01v02_lbd9x0_r5 &\

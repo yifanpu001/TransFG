@@ -100,4 +100,4 @@ class ISDALoss(nn.Module):
 
         loss = self.cross_entropy(isda_aug_y, labels)
 
-        return loss, logits
+        return loss

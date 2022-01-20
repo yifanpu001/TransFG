@@ -7,6 +7,7 @@ import pickle
 from ffrecord.torch import Dataset, DataLoader
 
 import os
+# os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 import sys
 import math
 import time
@@ -275,7 +276,6 @@ def setup_model(args):
     elif args.model_type.startswith("resnet"):
         model = eval(args.model_type)(pretrained=True, num_classes=args.num_classes)
 
-
     return args, model
 
 
@@ -344,7 +344,7 @@ def main_worker(local_rank, ngpus_per_node, args):
 
     # Prepare optimizer
     criterion_ce = torch.nn.CrossEntropyLoss().cuda(args.local_rank)
-    criterion_isda = ISDALoss(model.feature_num, args.class_num)
+    criterion_isda = ISDALoss(model.module.feature_num, args.num_classes)
     optimizer = torch.optim.SGD(model.parameters(),
                                 lr=args.lr,
                                 momentum=args.momentum,
@@ -357,7 +357,7 @@ def main_worker(local_rank, ngpus_per_node, args):
     # Prepare dataset
     train_loader, test_loader, train_sampler = get_loader(args)
 
-
+    
     # Init scores_all.csv
     if args.is_main_proc:
         if not os.path.exists(args.output_dir + '/scores_all.csv'):
@@ -428,7 +428,7 @@ def main_worker(local_rank, ngpus_per_node, args):
     logger.info("Training Complete.")
 
 
-def train(train_loader, model, criterion, optimizer, epoch, args):
+def train(train_loader, model, criterion_isda, optimizer, epoch, args):
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
@@ -455,7 +455,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
 
         # compute output
         logits, features = model(images)  # output == preds == logits
-        loss = criterion(model.module.fc, logits, features, target, ratio=args.lambda_0 * epoch / args.epochs)
+        loss = criterion_isda(model.module.fc, logits, features, target, ratio=args.lambda_0 * epoch / args.epochs)
 
         # measure accuracy and record loss
         acc1, acc5 = accuracy(logits, target, topk=(1, 5))
@@ -478,7 +478,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     return losses.avg, top1.avg
 
 
-def validate(val_loader, model, criterion, args):
+def validate(val_loader, model, criterion_ce, args):
     batch_time = AverageMeter('Time', ':6.3f', Summary.NONE)
     losses = AverageMeter('Loss', ':.4e', Summary.NONE)
     top1 = AverageMeter('Acc@1', ':6.2f', Summary.AVERAGE)
@@ -498,11 +498,11 @@ def validate(val_loader, model, criterion, args):
             target = target.cuda(args.local_rank, non_blocking=True)
 
             # compute output
-            preds = model(images)
-            loss = criterion(preds, target)
+            logits, features = model(images)
+            loss = criterion_ce(logits, target)
 
             # measure accuracy and record loss
-            acc1, acc5 = accuracy(preds, target, topk=(1, 5))
+            acc1, acc5 = accuracy(logits, target, topk=(1, 5))
 
             dist.all_reduce(acc1)
             acc1 /= args.world_size
