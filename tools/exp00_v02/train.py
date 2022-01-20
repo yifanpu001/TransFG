@@ -7,6 +7,7 @@ import pickle
 from ffrecord.torch import Dataset, DataLoader
 
 import os
+import sys
 import math
 import time
 import random
@@ -24,8 +25,11 @@ from torch.utils.tensorboard import SummaryWriter
 
 import torchvision
 
-from tools.exp00_v02.models.ViT import VisionTransformer, CONFIGS
-from tools.exp00_v02.utils.data_utils import get_loader
+sys.path.append("./tools/")
+sys.path.append("./tools/exp00_v02/")
+from models.ViT import VisionTransformer, CONFIGS
+from models.resnet import resnet50
+from utils.data_utils import get_loader
 
 logger = logging.getLogger(__name__)
 best_acc1, best_epoch = 0.0, 0
@@ -159,7 +163,7 @@ def estimated_time(t_start, cur_epoch, start_epoch, total_epoch):
     eta_min = int((eta_total - eta_hour * 3600) // 60)
     eta_sec = int(eta_total - eta_hour * 3600 - eta_min * 60)
     # args.print_custom(f'[INFO] Finished epoch:{epoch:02d};  ETA {eta_hour:02d} h {eta_min:02d} m {eta_sec:02d} s')
-    return f'Finished iter:{cur_epoch:05d}/{total_epoch:05d};  ETA {eta_hour:02d} h {eta_min:02d} m {eta_sec:02d} s'
+    return f'Finished epoch:{cur_epoch:05d}/{total_epoch:05d};  ETA {eta_hour:02d} h {eta_min:02d} m {eta_sec:02d} s'
 
 
 def count_parameters(model):
@@ -264,7 +268,7 @@ def setup_model(args):
             pretrained_model = torch.load(args.pretrained_model)['model']
             model.load_state_dict(pretrained_model)
     elif args.model_type.startswith("resnet"):
-        model = eval(f'torchvision.models.{args.model_type}')(pretrained=True)
+        model = eval(args.model_type)(pretrained=True)
 
 
     return args, model
@@ -407,9 +411,10 @@ def main_worker(local_rank, ngpus_per_node, args):
             logger.info(estimated_time(start_time, epoch, args.start_epoch, args.epochs))
 
     # record final result
-    with open(args.output_dir + '/scores_final.csv', "a") as f:
-        f.write(f'epoch, lr, loss_train, acc1_train, loss_test, acc1_test, acc1_test_best,\n')
-        f.write(f"{epoch:3d}, {get_lr(optimizer):15.12f}, {loss_train:9.8f}, {acc1_train:6.3f}, {loss_test:9.8f}, {acc1_test:6.3f}, {best_acc1:6.3f},\n")
+    if args.is_main_proc:
+        with open(args.output_dir + '/scores_final.csv', "a") as f:
+            f.write(f'epoch, lr, loss_train, acc1_train, loss_test, acc1_test, acc1_test_best,\n')
+            f.write(f"{epoch:3d}, {get_lr(optimizer):15.12f}, {loss_train:9.8f}, {acc1_train:6.3f}, {loss_test:9.8f}, {acc1_test:6.3f}, {best_acc1:6.3f},\n")
 
     writer.close()
     logger.info("Best Accuracy: \t%f" % best_acc1)
