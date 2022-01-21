@@ -7,6 +7,7 @@ import pickle
 from ffrecord.torch import Dataset, DataLoader
 
 import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '1,2'
 import sys
 import math
 import time
@@ -311,7 +312,7 @@ def main():
     args.output_dir = os.path.join(
         args.output_dir_root,
         args.output_dir,
-        f'{args.dataset}_{args.model_type}_bs{args.train_batch_size}_lr{args.lr}_wd{args.weight_decay}_epochs{args.epochs}_wmsteps{args.warmup_epochs}_{args.split}_round{args.round}/'
+        f'{args.dataset}_{args.model_type}_bs{args.train_batch_size}_lr{args.lr}_wd{args.weight_decay}_epochs{args.epochs}_wmsteps{args.warmup_epochs}_{args.split}_mlr{args.meta_lr}_lbd{args.lambda_0}_round{args.round}/'
     )
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
@@ -364,8 +365,8 @@ def main_worker(local_rank, ngpus_per_node, args):
 
 
     # Prepare optimizer
-    criterion_isda = ISDALoss(model.feature_num, args.num_classes).cuda(args.local_rank)
     criterion_ce = torch.nn.CrossEntropyLoss().cuda(args.local_rank)
+    criterion_isda = ISDALoss(model.module.feature_num, args.num_classes).cuda(args.local_rank)
     optimizer = torch.optim.SGD(model.parameters(),
                                 lr=args.lr,
                                 momentum=args.momentum,
@@ -544,6 +545,7 @@ def train_meta(train_loader, model, criterion_isda, criterion_ce, optimizer, epo
             pseudo_net = VisionTransformer(config, args.img_size, zero_head=True, num_classes=args.num_classes, smoothing_value=args.smoothing_value)
         elif args.model_type.startswith("resnet"):
             pseudo_net = eval(args.model_type)(pretrained=False, num_classes=args.num_classes)
+        pseudo_net = pseudo_net.cuda(args.local_rank)
         pseudo_net.load_state_dict(model.module.state_dict())
         pseudo_net.train()
 
@@ -567,7 +569,7 @@ def train_meta(train_loader, model, criterion_isda, criterion_ce, optimizer, epo
 
 
         outputs_logits, outputs_features = model(images_p1)
-        loss = criterion_isda(model.head, outputs_features, outputs_logits, target_p1, ratio, cv_matrix_updated, manner="update")
+        loss = criterion_isda(model.module.head, outputs_features, outputs_logits, target_p1, ratio, cv_matrix_updated, manner="update")
         # measure accuracy and record loss
         acc1, acc5 = accuracy(outputs_logits, target_p1, topk=(1, 5))
         losses.update(loss.item(), images_p1.size(0))
@@ -593,6 +595,7 @@ def train_meta(train_loader, model, criterion_isda, criterion_ce, optimizer, epo
             pseudo_net = VisionTransformer(config, args.img_size, zero_head=True, num_classes=args.num_classes, smoothing_value=args.smoothing_value)
         elif args.model_type.startswith("resnet"):
             pseudo_net = eval(args.model_type)(pretrained=False, num_classes=args.num_classes)
+        pseudo_net = pseudo_net.cuda(args.local_rank)
         pseudo_net.load_state_dict(model.module.state_dict())
         pseudo_net.train()
 
@@ -616,7 +619,7 @@ def train_meta(train_loader, model, criterion_isda, criterion_ce, optimizer, epo
 
 
         outputs_logits, outputs_features = model(images_p2)
-        loss = criterion_isda(model.head, outputs_features, outputs_logits, target_p2, ratio, cv_matrix_updated, manner="update")
+        loss = criterion_isda(model.module.head, outputs_features, outputs_logits, target_p2, ratio, cv_matrix_updated, manner="update")
         # measure accuracy and record loss
         acc1, acc5 = accuracy(outputs_logits, target_p2, topk=(1, 5))
         losses.update(loss.item(), images_p2.size(0))

@@ -7,7 +7,7 @@ class EstimatorCV():
     def __init__(self, feature_num, class_num):
         super(EstimatorCV, self).__init__()
         self.class_num = class_num
-        self.CoVariance = torch.zeros(class_num, feature_num).cuda()
+        self.CoVariance = torch.zeros(class_num, feature_num).cuda().requires_grad_()
         self.Ave = torch.zeros(class_num, feature_num).cuda()
         self.Amount = torch.zeros(class_num).cuda()
 

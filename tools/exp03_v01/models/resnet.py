@@ -234,7 +234,9 @@ def _resnet(arch, block, layers, pretrained, progress, **kwargs):
         # state_dict = load_state_dict_from_url(model_urls[arch],
         #                                       progress=progress)
         state_dict = torch.load(model_urls[arch], map_location='cpu')
-        model.load_state_dict(state_dict)
+        state_dict.pop('fc.weight')
+        state_dict.pop('fc.bias')
+        model.load_state_dict(state_dict, strict=False)
     return model
 
 
