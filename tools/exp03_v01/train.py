@@ -31,6 +31,7 @@ sys.path.append("./tools/")
 sys.path.append("./tools/exp03_v01/")
 from models.ViT import VisionTransformer, CONFIGS
 from models.resnet import resnet50
+from models.mlp import MLP_sigmoid
 from utils.data_utils import get_loader
 from isda import ISDALoss
 from meta import MetaSGD
@@ -147,7 +148,7 @@ def adjust_learning_rate(optimizer, init_lr, epoch_total, warmup_epochs, epoch_c
     return lr
 
 
-def adjust_meta_learning_rate(init_lr, epoch_total, warmup_epochs, epoch_cur, num_iter_per_epoch, i_iter):
+def adjust_meta_learning_rate(optimizer, init_lr, epoch_total, warmup_epochs, epoch_cur, num_iter_per_epoch, i_iter):
     """
     cosine learning rate with warm-up
     """
@@ -161,6 +162,8 @@ def adjust_meta_learning_rate(init_lr, epoch_total, warmup_epochs, epoch_cur, nu
         T_cur = (epoch_cur - warmup_epochs) * num_iter_per_epoch + i_iter
         T_total = (epoch_total - warmup_epochs) * num_iter_per_epoch
         lr = 0.5 * init_lr * (1 + math.cos(math.pi * T_cur / T_total))
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
     return lr
 
 
@@ -255,6 +258,9 @@ def get_args():
     # Meta
     parser.add_argument("--meta_lr", default=3e-2, type=float,
                         help="The initial meta learning rate.")
+    parser.add_argument('--meta_net_hidden_size', default=1024, type=int, required=True)
+    parser.add_argument('--meta_net_num_layers', default=1, type=int, required=True)
+    parser.add_argument('--meta_weight_decay', type=float, default=0.)
     args = parser.parse_args()
     return args
 
@@ -354,6 +360,12 @@ def main_worker(local_rank, ngpus_per_node, args):
 
     # Model & Tokenizer Setup
     args, model = setup_model(args)
+    meta_net = MLP_sigmoid(
+        input_size=model.feature_num, 
+        hidden_size=args.meta_net_hidden_size, 
+        num_layers=args.meta_net_num_layers,
+        output_size=model.feature_num,
+    )
 
 
     # DistributedDataParallel
@@ -361,7 +373,9 @@ def main_worker(local_rank, ngpus_per_node, args):
     args.workers = int((args.workers + args.ngpus_per_node - 1) / args.ngpus_per_node)
     torch.cuda.set_device(args.local_rank)
     model.cuda(args.local_rank)
+    meta_net.cuda(args.gpu)
     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.local_rank])
+    meta_net = torch.nn.parallel.DistributedDataParallel(meta_net, device_ids=[args.local_rank])
 
 
     # Prepare optimizer
@@ -371,6 +385,7 @@ def main_worker(local_rank, ngpus_per_node, args):
                                 lr=args.lr,
                                 momentum=args.momentum,
                                 weight_decay=args.weight_decay)
+    meta_optimizer = torch.optim.Adam(meta_net.parameters(), lr=args.meta_lr, weight_decay=args.meta_weight_decay)
 
 
     cudnn.benchmark = True
@@ -384,7 +399,7 @@ def main_worker(local_rank, ngpus_per_node, args):
     if args.is_main_proc:
         if not os.path.exists(args.output_dir + '/scores_all.csv'):
             with open(args.output_dir + '/scores_all.csv', "a") as f:
-                f.write(f'epoch, lr, loss_train, acc1_train, loss_test, acc1_test, acc1_test_best,\n')
+                f.write(f'epoch, lr, loss_train, loss_meta, acc1_train, loss_test, acc1_test, acc1_test_best,\n')
 
 
     # Auto Resume
@@ -395,6 +410,8 @@ def main_worker(local_rank, ngpus_per_node, args):
         args.start_epoch = ckpt['epoch']
         model.module.load_state_dict(ckpt['state_dict'])
         optimizer.load_state_dict(ckpt['optimizer'])
+        meta_net.module.load_state_dict(ckpt['meta_state_dict'])
+        meta_optimizer.load_state_dict(ckpt['meta_optimizer'])
         curr_acc1 = ckpt['curr_acc1']
         best_acc1 = ckpt['best_acc1']
         logger.info(f'[INFO] Auto Resume from {resume_dir}, from  finished epoch {args.start_epoch}, with acc_best{best_acc1}, acc_curr {curr_acc1}.')
@@ -406,11 +423,12 @@ def main_worker(local_rank, ngpus_per_node, args):
     start_time = time.time()
     for epoch in range(args.start_epoch, args.epochs):
         train_sampler.set_epoch(epoch)
-        loss_train, acc1_train = train_meta(train_loader, model, criterion_isda, criterion_ce, optimizer, epoch, args)
+        loss_train, loss_meta, acc1_train = train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, optimizer, meta_optimizer, epoch, args)
         loss_test, acc1_test = validate(test_loader, model, criterion_ce, args)
 
         if args.is_main_proc:
             writer.add_scalar("train/loss", scalar_value=loss_train, global_step=epoch)
+            writer.add_scalar("train/loss_meta", scalar_value=loss_meta, global_step=epoch)
             writer.add_scalar("train/acc1", scalar_value=acc1_train, global_step=epoch)
             writer.add_scalar("train/lr", scalar_value=get_lr(optimizer), global_step=epoch)
             writer.add_scalar("test/loss", scalar_value=loss_test, global_step=epoch)
@@ -423,13 +441,15 @@ def main_worker(local_rank, ngpus_per_node, args):
 
             with open(args.output_dir + '/scores_all.csv', "a") as f:
                 f.write(
-                    f"{epoch:3d}, {get_lr(optimizer):15.12f}, {loss_train:9.8f}, {acc1_train:6.3f}, {loss_test:9.8f}, {acc1_test:6.3f}, {best_acc1:6.3f},\n"
+                    f"{epoch:3d}, {get_lr(optimizer):15.12f}, {loss_train:9.8f}, {loss_meta:9.8f}, {acc1_train:6.3f}, {loss_test:9.8f}, {acc1_test:6.3f}, {best_acc1:6.3f},\n"
                 )
 
             save_checkpoint(
                 {'epoch': epoch + 1,
                  'state_dict': model.module.state_dict(),
                  'optimizer' : optimizer.state_dict(),
+                 'meta_state_dict': meta_net.module.state_dict(),
+                 'meta_optimizer': meta_optimizer.state_dict(),
                  'curr_acc1': acc1_test,
                  'best_acc1': best_acc1,
                  'best_epoch': best_epoch,
@@ -442,7 +462,7 @@ def main_worker(local_rank, ngpus_per_node, args):
     if args.is_main_proc:
         with open(args.output_dir + '/scores_final.csv', "a") as f:
             f.write(f'epoch, lr, loss_train, acc1_train, loss_test, acc1_test, acc1_test_best,\n')
-            f.write(f"{epoch:3d}, {get_lr(optimizer):15.12f}, {loss_train:9.8f}, {acc1_train:6.3f}, {loss_test:9.8f}, {acc1_test:6.3f}, {best_acc1:6.3f},\n")
+            f.write(f"{epoch:3d}, {get_lr(optimizer):15.12f}, {loss_train:9.8f}, {loss_meta:9.8f}, {acc1_train:6.3f}, {loss_test:9.8f}, {acc1_test:6.3f}, {best_acc1:6.3f},\n")
 
     writer.close()
     logger.info("Best Accuracy: \t%f" % best_acc1)
@@ -500,15 +520,16 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     return losses.avg, top1.avg
 
 
-def train_meta(train_loader, model, criterion_isda, criterion_ce, optimizer, epoch, args):
+def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, optimizer, meta_optimizer, epoch, args):
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
+    meta_losses = AverageMeter('MetaLoss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
     top5 = AverageMeter('Acc@5', ':6.2f')
     progress = ProgressMeter(
         len(train_loader),
-        [batch_time, data_time, losses, top1, top5],
+        [batch_time, data_time, losses, meta_losses, top1, top5],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
@@ -528,7 +549,7 @@ def train_meta(train_loader, model, criterion_isda, criterion_ce, optimizer, epo
         lr = adjust_learning_rate(optimizer, init_lr=args.lr,
                              epoch_total=args.epochs, warmup_epochs=args.warmup_epochs, epoch_cur=epoch,
                              num_iter_per_epoch=len(train_loader), i_iter=i)
-        meta_lr = adjust_meta_learning_rate(init_lr=args.meta_lr,
+        meta_lr = adjust_meta_learning_rate(meta_optimizer, init_lr=args.meta_lr,
                              epoch_total=args.epochs, warmup_epochs=args.warmup_epochs, epoch_cur=epoch,
                              num_iter_per_epoch=len(train_loader), i_iter=i)
         ratio = args.lambda_0 * (epoch / args.epochs)
@@ -536,8 +557,6 @@ def train_meta(train_loader, model, criterion_isda, criterion_ce, optimizer, epo
         ###################################################
         ## part 1: images_p1 as train, images_p2 as meta ##
         ###################################################
-        cv_matrix = criterion_isda.get_cv()
-
         if args.model_type.startswith("ViT"):
             config = CONFIGS[args.model_type]
             config.split = args.split
@@ -550,26 +569,34 @@ def train_meta(train_loader, model, criterion_isda, criterion_ce, optimizer, epo
         pseudo_net.train()
 
         pseudo_outputs_logits, pseudo_outputs_features = pseudo_net(images_p1)
-        pseudo_loss = criterion_isda(pseudo_net.head, pseudo_outputs_features, pseudo_outputs_logits, target_p1, ratio, cv_matrix, manner="none")
-        pseudo_net.zero_grad()
+
+        cv_matrix = meta_net(pseudo_outputs_features.detach())
+
+        pseudo_loss = criterion_isda(pseudo_net.head, pseudo_outputs_features, pseudo_outputs_logits, target_p1, ratio, cv_matrix)
 
         pseudo_grads = torch.autograd.grad(pseudo_loss, pseudo_net.parameters(), create_graph=True)
+
         pseudo_optimizer = MetaSGD(pseudo_net, pseudo_net.parameters(), lr=lr)
         pseudo_optimizer.load_state_dict(optimizer.state_dict())
         pseudo_optimizer.meta_step(pseudo_grads)
+
         del pseudo_grads
+
 
 
         meta_outputs_logits, meta_outputs_features = pseudo_net(images_p2)
         meta_loss = criterion_ce(meta_outputs_logits, target_p2)
+        meta_losses.update(meta_loss.item(), images_p2.size(0))
 
-        grad_cv = torch.autograd.grad(meta_loss, cv_matrix, only_inputs=True)[0]
-        cv_matrix_updated = cv_matrix - meta_lr * grad_cv
-        del grad_cv
+        meta_optimizer.zero_grad()
+        meta_loss.backward()
+        meta_optimizer.step()
 
 
         outputs_logits, outputs_features = model(images_p1)
-        loss = criterion_isda(model.module.head, outputs_features, outputs_logits, target_p1, ratio, cv_matrix_updated, manner="update")
+        cv_matrix = meta_net(outputs_features)
+        loss = criterion_isda(model.module.head, outputs_features, outputs_logits, target_p1, ratio, cv_matrix)
+
         # measure accuracy and record loss
         acc1, acc5 = accuracy(outputs_logits, target_p1, topk=(1, 5))
         losses.update(loss.item(), images_p1.size(0))
@@ -586,8 +613,6 @@ def train_meta(train_loader, model, criterion_isda, criterion_ce, optimizer, epo
         ###################################################
         ## part 2: images_p2 as train, images_p1 as meta ##
         ###################################################
-        cv_matrix = criterion_isda.get_cv()
-
         if args.model_type.startswith("ViT"):
             config = CONFIGS[args.model_type]
             config.split = args.split
@@ -600,26 +625,34 @@ def train_meta(train_loader, model, criterion_isda, criterion_ce, optimizer, epo
         pseudo_net.train()
 
         pseudo_outputs_logits, pseudo_outputs_features = pseudo_net(images_p2)
-        pseudo_loss = criterion_isda(pseudo_net.head, pseudo_outputs_features, pseudo_outputs_logits, target_p2, ratio, cv_matrix, manner="none")
-        pseudo_net.zero_grad()
+
+        cv_matrix = meta_net(pseudo_outputs_features.detach())
+
+        pseudo_loss = criterion_isda(pseudo_net.head, pseudo_outputs_features, pseudo_outputs_logits, target_p2, ratio, cv_matrix)
 
         pseudo_grads = torch.autograd.grad(pseudo_loss, pseudo_net.parameters(), create_graph=True)
+
         pseudo_optimizer = MetaSGD(pseudo_net, pseudo_net.parameters(), lr=lr)
         pseudo_optimizer.load_state_dict(optimizer.state_dict())
         pseudo_optimizer.meta_step(pseudo_grads)
+
         del pseudo_grads
+
 
 
         meta_outputs_logits, meta_outputs_features = pseudo_net(images_p1)
         meta_loss = criterion_ce(meta_outputs_logits, target_p1)
+        meta_losses.update(meta_loss.item(), images_p1.size(0))
 
-        grad_cv = torch.autograd.grad(meta_loss, cv_matrix, only_inputs=True)[0]
-        cv_matrix_updated = cv_matrix - meta_lr * grad_cv
-        del grad_cv
+        meta_optimizer.zero_grad()
+        meta_loss.backward()
+        meta_optimizer.step()
 
 
         outputs_logits, outputs_features = model(images_p2)
-        loss = criterion_isda(model.module.head, outputs_features, outputs_logits, target_p2, ratio, cv_matrix_updated, manner="update")
+        cv_matrix = meta_net(outputs_features)
+        loss = criterion_isda(model.module.head, outputs_features, outputs_logits, target_p2, ratio, cv_matrix)
+
         # measure accuracy and record loss
         acc1, acc5 = accuracy(outputs_logits, target_p2, topk=(1, 5))
         losses.update(loss.item(), images_p2.size(0))
@@ -640,7 +673,7 @@ def train_meta(train_loader, model, criterion_isda, criterion_ce, optimizer, epo
         if (i % args.print_freq == 0) and args.is_main_proc:
             progress.display(i)
     
-    return losses.avg, top1.avg
+    return losses.avg, meta_losses.avg, top1.avg
 
 
 def validate(val_loader, model, criterion, args):
