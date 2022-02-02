@@ -36,7 +36,7 @@ class ISDALoss(nn.Module):
 
         return aug_result
 
-    def forward(self, fc, features, logits, labels, ratio, cv_matrix, manner):
+    def forward(self, fc, features, logits, labels, ratio, cv_matrix):
 
         isda_aug_logits = self.isda_aug(fc, features, logits, labels, cv_matrix, ratio)
 

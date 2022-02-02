@@ -220,7 +220,8 @@ class ResNet(nn.Module):
 
         x = self.avgpool(x)
         features = torch.flatten(x, 1)
-        x = self.head(features)
+        # x = self.head(features)
+        x = torch.nn.functional.linear(features, weight=self.head.weight.detach(), bias=self.head.bias.detach())
 
         return x, features
 

@@ -7,7 +7,7 @@ import pickle
 from ffrecord.torch import Dataset, DataLoader
 
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '1,2'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '1,2'
 import sys
 import math
 import time
@@ -318,7 +318,7 @@ def main():
     args.output_dir = os.path.join(
         args.output_dir_root,
         args.output_dir,
-        f'{args.dataset}_{args.model_type}_bs{args.train_batch_size}_lr{args.lr}_wd{args.weight_decay}_epochs{args.epochs}_wmsteps{args.warmup_epochs}_{args.split}_mlr{args.meta_lr}_lbd{args.lambda_0}_round{args.round}/'
+        f'{args.dataset}_{args.model_type}_bs{args.train_batch_size}_lr{args.lr}_wd{args.weight_decay}_epochs{args.epochs}_wmsteps{args.warmup_epochs}_{args.split}_mlr{args.meta_lr}_mhs{args.meta_net_hidden_size}_mlyer{args.meta_net_num_layers}_mdw{args.meta_weight_decay}_lbd{args.lambda_0}_round{args.round}/'
     )
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
@@ -373,7 +373,7 @@ def main_worker(local_rank, ngpus_per_node, args):
     args.workers = int((args.workers + args.ngpus_per_node - 1) / args.ngpus_per_node)
     torch.cuda.set_device(args.local_rank)
     model.cuda(args.local_rank)
-    meta_net.cuda(args.gpu)
+    meta_net.cuda(args.local_rank)
     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.local_rank])
     meta_net = torch.nn.parallel.DistributedDataParallel(meta_net, device_ids=[args.local_rank])
 
@@ -570,11 +570,12 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
 
         pseudo_outputs_logits, pseudo_outputs_features = pseudo_net(images_p1)
 
-        cv_matrix = meta_net(pseudo_outputs_features.detach())
+        cv_matrix = meta_net(pseudo_outputs_features.detach()).to(args.local_rank)
 
-        pseudo_loss = criterion_isda(pseudo_net.head, pseudo_outputs_features, pseudo_outputs_logits, target_p1, ratio, cv_matrix)
+        # pseudo_loss = criterion_isda(pseudo_net.head, pseudo_outputs_features, pseudo_outputs_logits, target_p1, ratio, cv_matrix)
+        pseudo_loss = criterion_ce(pseudo_outputs_logits, target_p1)
 
-        pseudo_grads = torch.autograd.grad(pseudo_loss, pseudo_net.parameters(), create_graph=True)
+        pseudo_grads = torch.autograd.grad(pseudo_loss, pseudo_net.parameters(), create_graph=True, allow_unused=True)
 
         pseudo_optimizer = MetaSGD(pseudo_net, pseudo_net.parameters(), lr=lr)
         pseudo_optimizer.load_state_dict(optimizer.state_dict())
@@ -630,7 +631,7 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
 
         pseudo_loss = criterion_isda(pseudo_net.head, pseudo_outputs_features, pseudo_outputs_logits, target_p2, ratio, cv_matrix)
 
-        pseudo_grads = torch.autograd.grad(pseudo_loss, pseudo_net.parameters(), create_graph=True)
+        pseudo_grads = torch.autograd.grad(pseudo_loss, pseudo_net.parameters(), create_graph=True, allow_unused=True)
 
         pseudo_optimizer = MetaSGD(pseudo_net, pseudo_net.parameters(), lr=lr)
         pseudo_optimizer.load_state_dict(optimizer.state_dict())
