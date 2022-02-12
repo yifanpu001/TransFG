@@ -7,7 +7,8 @@ import pickle
 from ffrecord.torch import Dataset, DataLoader
 
 import os
-# os.environ['CUDA_VISIBLE_DEVICES'] = '1,2'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3,4,5,6,7'
 import sys
 import math
 import time
@@ -344,6 +345,7 @@ def main_worker(local_rank, ngpus_per_node, args):
                         level=logging.INFO if args.local_rank in [-1, 0] else logging.WARN,
                         filename=os.path.join(args.output_dir, 'screen_output.log'))
     writer = SummaryWriter(log_dir=os.path.join(args.output_dir, "tensorboardlog"))
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Setup logging & TensorBoard Writer')
 
 
     # Multiprocessing
@@ -356,6 +358,7 @@ def main_worker(local_rank, ngpus_per_node, args):
     args.world_rank = rank * args.ngpus_per_node + args.local_rank
     dist.init_process_group(backend='nccl', init_method=f'tcp://{ip}:{port}', world_size=args.world_size, rank=args.world_rank)
     args.is_main_proc = (args.world_rank == 0)
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Multiprocessing')
 
 
     # Model & Tokenizer Setup
@@ -366,6 +369,7 @@ def main_worker(local_rank, ngpus_per_node, args):
         num_layers=args.meta_net_num_layers,
         output_size=model.feature_num,
     )
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Model & Tokenizer Setup')
 
 
     # DistributedDataParallel
@@ -376,16 +380,18 @@ def main_worker(local_rank, ngpus_per_node, args):
     meta_net.cuda(args.local_rank)
     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.local_rank])
     meta_net = torch.nn.parallel.DistributedDataParallel(meta_net, device_ids=[args.local_rank])
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: DistributedDataParallel')
 
 
     # Prepare optimizer
     criterion_ce = torch.nn.CrossEntropyLoss().cuda(args.local_rank)
-    criterion_isda = ISDALoss(model.module.feature_num, args.num_classes).cuda(args.local_rank)
+    criterion_isda = ISDALoss(model.module.feature_num, args.num_classes, args.local_rank).cuda(args.local_rank)
     optimizer = torch.optim.SGD(model.parameters(),
                                 lr=args.lr,
                                 momentum=args.momentum,
                                 weight_decay=args.weight_decay)
     meta_optimizer = torch.optim.Adam(meta_net.parameters(), lr=args.meta_lr, weight_decay=args.meta_weight_decay)
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Prepare optimizer')
 
 
     cudnn.benchmark = True
@@ -393,6 +399,7 @@ def main_worker(local_rank, ngpus_per_node, args):
 
     # Prepare dataset
     train_loader, test_loader, train_sampler = get_loader(args)
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Prepare dataset')
 
 
     # Init scores_all.csv
@@ -415,6 +422,7 @@ def main_worker(local_rank, ngpus_per_node, args):
         curr_acc1 = ckpt['curr_acc1']
         best_acc1 = ckpt['best_acc1']
         logger.info(f'[INFO] Auto Resume from {resume_dir}, from  finished epoch {args.start_epoch}, with acc_best{best_acc1}, acc_curr {curr_acc1}.')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Auto Resume')
 
 
     # Start Train
@@ -422,6 +430,7 @@ def main_worker(local_rank, ngpus_per_node, args):
 
     start_time = time.time()
     for epoch in range(args.start_epoch, args.epochs):
+        print(f'[Debug Info] [GPU:{args.local_rank}] Enter Training! ')
         train_sampler.set_epoch(epoch)
         loss_train, loss_meta, acc1_train = train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, optimizer, meta_optimizer, epoch, args)
         loss_test, acc1_test = validate(test_loader, model, criterion_ce, args)
@@ -537,6 +546,7 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
 
     end = time.time()
     for i, (images, target) in enumerate(train_loader):
+        print(f'[Debug Info] [GPU:{args.local_rank}] Enter epoch:{epoch}, iter:{i}.')
         images = images.cuda(args.local_rank, non_blocking=True)
         target = target.cuda(args.local_rank, non_blocking=True)
 
@@ -544,6 +554,8 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
         target_p1, target_p2 = target.chunk(2, dim=0)
 
         data_time.update(time.time() - end)
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: data')
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: ')
 
         # adjust learning rate
         lr = adjust_learning_rate(optimizer, init_lr=args.lr,
@@ -553,7 +565,8 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
                              epoch_total=args.epochs, warmup_epochs=args.warmup_epochs, epoch_cur=epoch,
                              num_iter_per_epoch=len(train_loader), i_iter=i)
         ratio = args.lambda_0 * (epoch / args.epochs)
-        
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: lr')
+
         ###################################################
         ## part 1: images_p1 as train, images_p2 as meta ##
         ###################################################
@@ -582,21 +595,29 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
         pseudo_optimizer.meta_step(pseudo_grads)
 
         del pseudo_grads
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: pseudo_grads')
+
 
 
 
         meta_outputs_logits, meta_outputs_features = pseudo_net(images_p2)
         meta_loss = criterion_ce(meta_outputs_logits, target_p2)
         meta_losses.update(meta_loss.item(), images_p2.size(0))
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: meta forward')
 
         meta_optimizer.zero_grad()
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: meta_optimizer.zero_grad()')
         meta_loss.backward()
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: meta_loss.backward()')
         meta_optimizer.step()
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: meta_optimizer.step()')
 
 
         outputs_logits, outputs_features = model(images_p1)
         cv_matrix = meta_net(outputs_features)
         loss = criterion_isda(model.module.head, outputs_features, outputs_logits, target_p1, ratio, cv_matrix)
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: loss')
+
 
         # measure accuracy and record loss
         acc1, acc5 = accuracy(outputs_logits, target_p1, topk=(1, 5))
@@ -608,6 +629,7 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: optimizer.step()')
 
 
 

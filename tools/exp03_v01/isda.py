@@ -4,12 +4,12 @@ import torch.nn.functional as F
 
 
 class ISDALoss(nn.Module):
-    def __init__(self, feature_num, class_num):
+    def __init__(self, feature_num, class_num, local_rank):
         super(ISDALoss, self).__init__()
 
         self.class_num = class_num
 
-        self.cross_entropy = nn.CrossEntropyLoss()
+        self.cross_entropy = nn.CrossEntropyLoss().cuda(local_rank)
 
     def isda_aug(self, fc, features, y, labels, cv_matrix, ratio):
 
@@ -40,6 +40,6 @@ class ISDALoss(nn.Module):
 
         isda_aug_logits = self.isda_aug(fc, features, logits, labels, cv_matrix, ratio)
 
-        loss = F.cross_entropy(isda_aug_logits, labels)
+        loss = self.cross_entropy(isda_aug_logits, labels)
         
         return loss

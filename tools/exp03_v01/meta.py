@@ -28,6 +28,10 @@ class MetaSGD(SGD):
         lr = group['lr']
 
         for (name, parameter), grad in zip(self.net.named_parameters(), grads):
+
+            if grad == None:  # for the require_grad=False parameters
+                continue
+            
             parameter.detach_()
             if weight_decay != 0:
                 grad_wd = grad.add(parameter, alpha=weight_decay)
