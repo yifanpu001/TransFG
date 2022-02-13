@@ -21,12 +21,16 @@ def get_loader(args):
                                     transforms.RandomHorizontalFlip(),
                                     transforms.ToTensor(),
                                     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
+        print(f'[Debug Info] [GPU:{args.local_rank}] Done: train_transform') if (args.debug_flag == 3) else print('', end='')
         test_transform=transforms.Compose([transforms.Resize((600, 600), Image.BILINEAR),
                                     transforms.CenterCrop((448, 448)),
                                     transforms.ToTensor(),
                                     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
-        trainset = CUB(root=args.data_root, is_train=True, transform=train_transform)
-        testset = CUB(root=args.data_root, is_train=False, transform = test_transform)
+        print(f'[Debug Info] [GPU:{args.local_rank}] Done: test_transform') if (args.debug_flag == 3) else print('', end='')
+        trainset = CUB(root=args.data_root, is_train=True, transform=train_transform, args=args)
+        print(f'[Debug Info] [GPU:{args.local_rank}] Done: trainset') if (args.debug_flag == 3) else print('', end='')
+        testset = CUB(root=args.data_root, is_train=False, transform = test_transform, args=args)
+        print(f'[Debug Info] [GPU:{args.local_rank}] Done: testset') if (args.debug_flag == 3) else print('', end='')
     elif args.dataset == 'car':
         trainset = CarsDataset(os.path.join(args.data_root,'devkit/cars_train_annos.mat'),
                             os.path.join(args.data_root,'cars_train'),
@@ -100,6 +104,7 @@ def get_loader(args):
 
     train_sampler = torch.utils.data.distributed.DistributedSampler(trainset)
     test_sampler = torch.utils.data.distributed.DistributedSampler(testset)
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: sampler') if (args.debug_flag == 3) else print('', end='')
 
     train_loader = DataLoader(trainset,
                               sampler=train_sampler,
@@ -107,10 +112,12 @@ def get_loader(args):
                               num_workers=args.workers,
                               drop_last=True,
                               pin_memory=True)
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: train_loader') if (args.debug_flag == 3) else print('', end='')
     test_loader = DataLoader(testset,
                              sampler=test_sampler,
                              batch_size=args.eval_batch_size,
                              num_workers=args.workers,
                              pin_memory=True) if testset is not None else None
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: test_loader') if (args.debug_flag == 3) else print('', end='')
 
     return train_loader, test_loader, train_sampler

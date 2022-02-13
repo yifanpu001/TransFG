@@ -360,7 +360,7 @@ def main_worker(local_rank, ngpus_per_node, args):
                         level=logging.INFO if args.local_rank in [-1, 0] else logging.WARN,
                         filename=os.path.join(args.output_dir, 'screen_output.log'))
     writer = SummaryWriter(log_dir=os.path.join(args.output_dir, "tensorboardlog"))
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Setup logging & TensorBoard Writer') if args.debug_flag != 0 else print('', end='')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Setup logging & TensorBoard Writer') if (args.debug_flag == 1 or args.debug_flag == 2) else print('', end='')
 
 
     # Multiprocessing
@@ -377,7 +377,7 @@ def main_worker(local_rank, ngpus_per_node, args):
     args.world_rank = rank * args.ngpus_per_node + args.local_rank
     dist.init_process_group(backend='nccl', init_method=f'tcp://{ip}:{port}', world_size=args.world_size, rank=args.world_rank)
     args.is_main_proc = (args.world_rank == 0)
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Multiprocessing') if args.debug_flag != 0 else print('', end='')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Multiprocessing') if (args.debug_flag == 1 or args.debug_flag == 2) else print('', end='')
 
 
     # Model & Tokenizer Setup
@@ -388,7 +388,7 @@ def main_worker(local_rank, ngpus_per_node, args):
         num_layers=args.meta_net_num_layers,
         output_size=model.feature_num,
     )
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Model & Tokenizer Setup') if args.debug_flag != 0 else print('', end='')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Model & Tokenizer Setup') if (args.debug_flag == 1 or args.debug_flag == 2) else print('', end='')
 
 
     # DistributedDataParallel
@@ -399,7 +399,7 @@ def main_worker(local_rank, ngpus_per_node, args):
     meta_net.cuda(args.local_rank)
     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.local_rank])
     meta_net = torch.nn.parallel.DistributedDataParallel(meta_net, device_ids=[args.local_rank])
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: DistributedDataParallel') if args.debug_flag != 0 else print('', end='')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: DistributedDataParallel') if (args.debug_flag == 1 or args.debug_flag == 2) else print('', end='')
 
 
     # Prepare optimizer
@@ -410,7 +410,7 @@ def main_worker(local_rank, ngpus_per_node, args):
                                 momentum=args.momentum,
                                 weight_decay=args.weight_decay)
     meta_optimizer = torch.optim.Adam(meta_net.parameters(), lr=args.meta_lr, weight_decay=args.meta_weight_decay)
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Prepare optimizer') if args.debug_flag != 0 else print('', end='')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Prepare optimizer') if (args.debug_flag == 1 or args.debug_flag == 2) else print('', end='')
 
 
     cudnn.benchmark = True
@@ -418,7 +418,7 @@ def main_worker(local_rank, ngpus_per_node, args):
 
     # Prepare dataset
     train_loader, test_loader, train_sampler = get_loader(args)
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Prepare dataset') if args.debug_flag != 0 else print('', end='')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Prepare dataset') if (args.debug_flag == 1 or args.debug_flag == 2) else print('', end='')
 
 
     # Init scores_all.csv
@@ -441,7 +441,7 @@ def main_worker(local_rank, ngpus_per_node, args):
         curr_acc1 = ckpt['curr_acc1']
         best_acc1 = ckpt['best_acc1']
         logger.info(f'[INFO] Auto Resume from {resume_dir}, from  finished epoch {args.start_epoch}, with acc_best{best_acc1}, acc_curr {curr_acc1}.')
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Auto Resume') if args.debug_flag != 0 else print('', end='')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Auto Resume') if (args.debug_flag == 1 or args.debug_flag == 2) else print('', end='')
 
 
     # Start Train
@@ -449,7 +449,7 @@ def main_worker(local_rank, ngpus_per_node, args):
 
     start_time = time.time()
     for epoch in range(args.start_epoch, args.epochs):
-        print(f'[Debug Info] [GPU:{args.local_rank}] Enter Training! ')
+        print(f'[Debug Info] [GPU:{args.local_rank}] Enter Training! epoch: {epoch} ') if (args.debug_flag == 2) else print('', end='')
         train_sampler.set_epoch(epoch)
         loss_train, loss_meta, acc1_train = train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, optimizer, meta_optimizer, epoch, args)
         loss_test, acc1_test = validate(test_loader, model, criterion_ce, args)
@@ -567,7 +567,7 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
 
     end = time.time()
     for i, (images, target) in enumerate(train_loader):
-        print(f'[Debug Info] [GPU:{args.local_rank}] Enter epoch:{epoch}, iter:{i}.') if args.debug_flag != 0 else print('', end='')
+        print(f'[Debug Info] [GPU:{args.local_rank}] Enter epoch:{epoch}, iter:{i}.') if (args.debug_flag == 2) else print('', end='')
         images = images.cuda(args.local_rank, non_blocking=True)
         target = target.cuda(args.local_rank, non_blocking=True)
 
@@ -575,7 +575,7 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
         target_p1, target_p2 = target.chunk(2, dim=0)
 
         data_time.update(time.time() - end)
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: data') if args.debug_flag != 0 else print('', end='')
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: data') if (args.debug_flag == 2) else print('', end='')
 
         # adjust learning rate
         lr = adjust_learning_rate(optimizer, init_lr=args.lr,
@@ -585,7 +585,7 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
                              epoch_total=args.epochs, warmup_epochs=args.warmup_epochs, epoch_cur=epoch,
                              num_iter_per_epoch=len(train_loader), i_iter=i)
         ratio = args.lambda_0 * (epoch / args.epochs)
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: lr') if args.debug_flag != 0 else print('', end='')
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: lr') if (args.debug_flag == 2) else print('', end='')
 
         ###################################################
         ## part 1: images_p1 as train, images_p2 as meta ##
@@ -615,7 +615,7 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
         pseudo_optimizer.meta_step(pseudo_grads)
 
         del pseudo_grads
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part1 Done: pseudo_grads') if args.debug_flag != 0 else print('', end='')
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part1 Done: pseudo_grads') if (args.debug_flag == 2) else print('', end='')
 
 
 
@@ -624,18 +624,18 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
         meta_outputs_logits = pseudo_net.head(meta_outputs_features)
         meta_loss = criterion_ce(meta_outputs_logits, target_p2)
         meta_losses.update(meta_loss.item(), images_p2.size(0))
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part1 Done: meta forward') if args.debug_flag != 0 else print('', end='')
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part1 Done: meta forward') if (args.debug_flag == 2) else print('', end='')
 
         meta_optimizer.zero_grad()
         meta_loss.backward()
         meta_optimizer.step()
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part1 Done: meta_optimizer.step()') if args.debug_flag != 0 else print('', end='')
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part1 Done: meta_optimizer.step()') if (args.debug_flag == 2) else print('', end='')
 
 
         outputs_features = model(images_p1)
         cv_matrix = meta_net(outputs_features)
         loss, outputs_logits = criterion_isda(model.module.head, outputs_features, target_p1, ratio, cv_matrix)
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part1 Done: loss') if args.debug_flag != 0 else print('', end='')
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part1 Done: loss') if (args.debug_flag == 2) else print('', end='')
 
 
         # measure accuracy and record loss
@@ -648,7 +648,7 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part1 Done: optimizer.step()')
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part1 Done: optimizer.step()') if (args.debug_flag == 2) else print('', end='')
 
 
 
@@ -680,7 +680,7 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
         pseudo_optimizer.meta_step(pseudo_grads)
 
         del pseudo_grads
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part2 Done: pseudo_grads') if args.debug_flag != 0 else print('', end='')
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part2 Done: pseudo_grads') if (args.debug_flag == 2) else print('', end='')
 
 
 
@@ -689,18 +689,18 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
         meta_outputs_logits = pseudo_net.head(meta_outputs_features)
         meta_loss = criterion_ce(meta_outputs_logits, target_p1)
         meta_losses.update(meta_loss.item(), images_p1.size(0))
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part2 Done: meta forward') if args.debug_flag != 0 else print('', end='')
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part2 Done: meta forward') if (args.debug_flag == 2) else print('', end='')
 
         meta_optimizer.zero_grad()
         meta_loss.backward()
         meta_optimizer.step()
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part2 Done: meta_optimizer.step()') if args.debug_flag != 0 else print('', end='')
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part2 Done: meta_optimizer.step()') if (args.debug_flag == 2) else print('', end='')
 
 
         outputs_features = model(images_p2)
         cv_matrix = meta_net(outputs_features)
         loss, outputs_logits = criterion_isda(model.module.head, outputs_features, target_p2, ratio, cv_matrix)
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part2 Done: loss') if args.debug_flag != 0 else print('', end='')
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part2 Done: loss') if (args.debug_flag == 2) else print('', end='')
 
 
         # measure accuracy and record loss
@@ -713,7 +713,7 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part2 Done: optimizer.step()')
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part2 Done: optimizer.step()') if (args.debug_flag == 2) else print('', end='')
 
 
         ###################################################
@@ -725,7 +725,7 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if (i % args.print_freq == 0) and args.is_main_proc:
+        if ((i % args.print_freq == 0) or (i == len(train_loader) - 1)) and args.is_main_proc:
             progress.display(i)
     
     return losses.avg, meta_losses.avg, top1.avg
@@ -751,7 +751,8 @@ def validate(val_loader, model, criterion, args):
             target = target.cuda(args.local_rank, non_blocking=True)
 
             # compute output
-            logits, features = model(images)
+            features = model(images)
+            logits = model.module.head(features)            
             loss = criterion(logits, target)
 
             # measure accuracy and record loss
@@ -772,7 +773,7 @@ def validate(val_loader, model, criterion, args):
             batch_time.update(time.time() - end)
             end = time.time()
 
-            if (i % args.print_freq == 0) and args.is_main_proc:
+            if ((i % args.print_freq == 0) or (i == len(val_loader) - 1)) and args.is_main_proc:
                 progress.display(i)
         
         if args.is_main_proc:
