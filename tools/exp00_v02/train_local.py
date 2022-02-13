@@ -1,15 +1,16 @@
 # coding=utf-8
 from __future__ import absolute_import, division, print_function
 
-import hf_env
-hf_env.set_env('202105')
-import pickle
-from ffrecord.torch import Dataset, DataLoader
+# import hf_env
+# hf_env.set_env('202105')
+# import pickle
+# from ffrecord.torch import Dataset, DataLoader
 
 import os
 import sys
 import math
 import time
+import socket
 import random
 import logging
 import argparse
@@ -242,15 +243,15 @@ def set_seed(args):
 def setup_model(args):
 
     if args.dataset == "CUB_200_2011":
-        num_classes = 200
+        args.num_classes = 200
     elif args.dataset == "car":
-        num_classes = 196
+        args.num_classes = 196
     elif args.dataset == "nabirds":
-        num_classes = 555
+        args.num_classes = 555
     elif args.dataset == "dog":
-        num_classes = 120
+        args.num_classes = 120
     elif args.dataset == "INat2017":
-        num_classes = 5089
+        args.num_classes = 5089
 
     # for ViT
     if args.model_type.startswith("ViT"):
@@ -259,7 +260,7 @@ def setup_model(args):
         config.split = args.split
         config.slide_step = args.slide_step
 
-        model = VisionTransformer(config, args.img_size, zero_head=True, num_classes=num_classes, smoothing_value=args.smoothing_value)
+        model = VisionTransformer(config, args.img_size, zero_head=True, num_classes=args.num_classes, smoothing_value=args.smoothing_value)
 
         model.load_from(np.load(os.path.join(args.output_dir_root, args.pretrained_dir)))
 
@@ -268,7 +269,7 @@ def setup_model(args):
             pretrained_model = torch.load(args.pretrained_model)['model']
             model.load_state_dict(pretrained_model)
     elif args.model_type.startswith("resnet"):
-        model = eval(args.model_type)(pretrained=True)
+        model = eval(args.model_type)(pretrained=True, num_classes=args.num_classes, pretrained_dir=args.pretrained_dir)
 
 
     return args, model
@@ -293,6 +294,9 @@ def main():
     # Set seed
     set_seed(args)
 
+    # get free port
+    args.port = get_free_port()
+
     # Start Multiprocessing
     mp.spawn(main_worker, nprocs=torch.cuda.device_count(), args=(torch.cuda.device_count(), args))  # ngpus_per_node = torch.cuda.device_count() == 8
 
@@ -314,10 +318,14 @@ def main_worker(local_rank, ngpus_per_node, args):
 
 
     # Multiprocessing
-    ip = os.environ['MASTER_IP']                        # same for each gpu, each node
-    port = os.environ['MASTER_PORT']                    # same for each gpu, each node
-    hosts = int(os.environ['WORLD_SIZE'])               # 机器个数, 每台机器有8张卡   相当于脚本里的--nodes=4的数量
-    rank = int(os.environ['RANK'])                      # 当前机器编号, 用了四台机器的话，编号分别是 0,1,2,3
+    # ip = os.environ['MASTER_IP']                        # same for each gpu, each node
+    # port = os.environ['MASTER_PORT']                    # same for each gpu, each node
+    # hosts = int(os.environ['WORLD_SIZE'])               # 机器个数, 每台机器有8张卡   相当于脚本里的--nodes=4的数量
+    # rank = int(os.environ['RANK'])                      # 当前机器编号, 用了四台机器的话，编号分别是 0,1,2,3
+    ip = '127.0.0.1'
+    port = args.port
+    hosts = 1
+    rank = 0
     args.ngpus_per_node = ngpus_per_node                # 每台机器的GPU个数 (8 for huanfnag)
     args.world_size = hosts * args.ngpus_per_node
     args.world_rank = rank * args.ngpus_per_node + args.local_rank
@@ -466,7 +474,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if (i % args.print_freq == 0) and args.is_main_proc:
+        if ((i % args.print_freq == 0) or (i == len(train_loader) - 1)) and args.is_main_proc:
             progress.display(i)
     
     return losses.avg, top1.avg
@@ -513,7 +521,7 @@ def validate(val_loader, model, criterion, args):
             batch_time.update(time.time() - end)
             end = time.time()
 
-            if (i % args.print_freq == 0) and args.is_main_proc:
+            if ((i % args.print_freq == 0) or (i == len(val_loader) - 1)) and args.is_main_proc:
                 progress.display(i)
         
         if args.is_main_proc:

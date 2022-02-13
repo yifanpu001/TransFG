@@ -82,3 +82,48 @@ hfai python tools/exp00_v02/train.py \
 --dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 8 \
 --epochs 100 --warmup_epochs 5 --round 3 \
 -- --nodes=1 --priority=10 --name=pyf_CUB_bsl_r50_r3 &\
+
+######### run02 (short epoch)
+# 20 epoch
+python tools/exp00_v02/train_local.py \
+--output_dir_root /root/share/TransFG/ --output_dir output/exp00_v02/run02 \
+--model_type resnet50 \
+--data_root /root/data/public \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 4 \
+--epochs 20 --warmup_epochs 5 --round 1 &&\
+
+python tools/exp00_v02/train_local.py \
+--output_dir_root /root/share/TransFG/ --output_dir output/exp00_v02/run02 \
+--model_type resnet50 \
+--data_root /root/data/public \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 4 \
+--epochs 20 --warmup_epochs 5 --round 2 &&\
+
+python tools/exp00_v02/train_local.py \
+--output_dir_root /root/share/TransFG/ --output_dir output/exp00_v02/run02 \
+--model_type resnet50 \
+--data_root /root/data/public \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 4 \
+--epochs 20 --warmup_epochs 5 --round 3 &&\
+
+# 30 epoch
+python tools/exp00_v02/train_local.py \
+--output_dir_root /root/share/TransFG/ --output_dir output/exp00_v02/run02 \
+--model_type resnet50 \
+--data_root /root/data/public \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 4 \
+--epochs 30 --warmup_epochs 5 --round 1 &&\
+
+python tools/exp00_v02/train_local.py \
+--output_dir_root /root/share/TransFG/ --output_dir output/exp00_v02/run02 \
+--model_type resnet50 \
+--data_root /root/data/public \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 4 \
+--epochs 30 --warmup_epochs 5 --round 2 &&\
+
+python tools/exp00_v02/train_local.py \
+--output_dir_root /root/share/TransFG/ --output_dir output/exp00_v02/run02 \
+--model_type resnet50 \
+--data_root /root/data/public \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 4 \
+--epochs 30 --warmup_epochs 5 --round 3 &&\
