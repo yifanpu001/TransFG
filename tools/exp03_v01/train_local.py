@@ -360,7 +360,7 @@ def main_worker(local_rank, ngpus_per_node, args):
                         level=logging.INFO if args.local_rank in [-1, 0] else logging.WARN,
                         filename=os.path.join(args.output_dir, 'screen_output.log'))
     writer = SummaryWriter(log_dir=os.path.join(args.output_dir, "tensorboardlog"))
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Setup logging & TensorBoard Writer') if (args.debug_flag == 1 or args.debug_flag == 2) else print('', end='')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Setup logging & TensorBoard Writer') if (args.debug_flag == 1 or args.debug_flag == 2 or args.debug_flag == 3) else print('', end='')
 
 
     # Multiprocessing
@@ -377,7 +377,7 @@ def main_worker(local_rank, ngpus_per_node, args):
     args.world_rank = rank * args.ngpus_per_node + args.local_rank
     dist.init_process_group(backend='nccl', init_method=f'tcp://{ip}:{port}', world_size=args.world_size, rank=args.world_rank)
     args.is_main_proc = (args.world_rank == 0)
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Multiprocessing') if (args.debug_flag == 1 or args.debug_flag == 2) else print('', end='')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Multiprocessing') if (args.debug_flag == 1 or args.debug_flag == 2 or args.debug_flag == 3) else print('', end='')
 
 
     # Model & Tokenizer Setup
@@ -388,7 +388,7 @@ def main_worker(local_rank, ngpus_per_node, args):
         num_layers=args.meta_net_num_layers,
         output_size=model.feature_num,
     )
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Model & Tokenizer Setup') if (args.debug_flag == 1 or args.debug_flag == 2) else print('', end='')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Model & Tokenizer Setup') if (args.debug_flag == 1 or args.debug_flag == 2 or args.debug_flag == 3) else print('', end='')
 
 
     # DistributedDataParallel
@@ -399,7 +399,7 @@ def main_worker(local_rank, ngpus_per_node, args):
     meta_net.cuda(args.local_rank)
     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.local_rank])
     meta_net = torch.nn.parallel.DistributedDataParallel(meta_net, device_ids=[args.local_rank])
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: DistributedDataParallel') if (args.debug_flag == 1 or args.debug_flag == 2) else print('', end='')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: DistributedDataParallel') if (args.debug_flag == 1 or args.debug_flag == 2 or args.debug_flag == 3) else print('', end='')
 
 
     # Prepare optimizer
@@ -410,7 +410,7 @@ def main_worker(local_rank, ngpus_per_node, args):
                                 momentum=args.momentum,
                                 weight_decay=args.weight_decay)
     meta_optimizer = torch.optim.Adam(meta_net.parameters(), lr=args.meta_lr, weight_decay=args.meta_weight_decay)
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Prepare optimizer') if (args.debug_flag == 1 or args.debug_flag == 2) else print('', end='')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Prepare optimizer') if (args.debug_flag == 1 or args.debug_flag == 2 or args.debug_flag == 3) else print('', end='')
 
 
     cudnn.benchmark = True
@@ -418,7 +418,7 @@ def main_worker(local_rank, ngpus_per_node, args):
 
     # Prepare dataset
     train_loader, test_loader, train_sampler = get_loader(args)
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Prepare dataset') if (args.debug_flag == 1 or args.debug_flag == 2) else print('', end='')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Prepare dataset') if (args.debug_flag == 1 or args.debug_flag == 2 or args.debug_flag == 3) else print('', end='')
 
 
     # Init scores_all.csv
@@ -441,7 +441,7 @@ def main_worker(local_rank, ngpus_per_node, args):
         curr_acc1 = ckpt['curr_acc1']
         best_acc1 = ckpt['best_acc1']
         logger.info(f'[INFO] Auto Resume from {resume_dir}, from  finished epoch {args.start_epoch}, with acc_best{best_acc1}, acc_curr {curr_acc1}.')
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Auto Resume') if (args.debug_flag == 1 or args.debug_flag == 2) else print('', end='')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Auto Resume') if (args.debug_flag == 1 or args.debug_flag == 2 or args.debug_flag == 3) else print('', end='')
 
 
     # Start Train
