@@ -543,7 +543,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if (i % args.print_freq == 0) and args.is_main_proc:
+        if ((i % args.print_freq == 0) or (i == len(train_loader) - 1)) and args.is_main_proc:
             progress.display(i)
 
     return losses.avg, top1.avg
