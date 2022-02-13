@@ -19,7 +19,6 @@ import numpy as np
 from enum import Enum
 
 import torch
-import torch.nn.functional as F
 import torch.distributed as dist
 import torch.multiprocessing as mp
 import torch.backends.cudnn as cudnn
