@@ -12,6 +12,7 @@ import os
 import sys
 import math
 import time
+import socket
 import random
 import logging
 import argparse
@@ -19,6 +20,7 @@ import numpy as np
 from enum import Enum
 
 import torch
+import torch.nn.functional as F
 import torch.distributed as dist
 import torch.multiprocessing as mp
 import torch.backends.cudnn as cudnn
@@ -195,6 +197,13 @@ def count_parameters(model):
     return params/1000000
 
 
+def get_free_port():
+    sock = socket.socket()
+    sock.bind(('', 0))
+    free_port = sock.getsockname()[1]
+    return free_port
+
+
 """ part of main """
 def get_args():
     parser = argparse.ArgumentParser()
@@ -251,6 +260,10 @@ def get_args():
                         help="Split method")
     parser.add_argument('--slide_step', type=int, default=12,
                         help="Slide step for overlap split")
+    # Debug Flag
+    parser.add_argument('--debug_flag', type=int, default=0,
+                        help="debug flag. if != 0, print debug information.")
+
     # ISDA
     parser.add_argument('--lambda_0', type=float, required=True,
                     help='The hyper-parameter \lambda_0 for ISDA, select from {1, 2.5, 5, 7.5, 10}. '
@@ -301,7 +314,7 @@ def setup_model(args):
             pretrained_model = torch.load(args.pretrained_model)['model']
             model.load_state_dict(pretrained_model)
     elif args.model_type.startswith("resnet"):
-        model = eval(args.model_type)(pretrained=True, num_classes=args.num_classes)
+        model = eval(args.model_type)(pretrained=True, num_classes=args.num_classes, pretrained_dir=args.pretrained_dir)
 
 
     return args, model
@@ -326,6 +339,9 @@ def main():
     # Set seed
     set_seed(args)
 
+    # get free port
+    args.port = get_free_port()
+
     # Start Multiprocessing
     mp.spawn(main_worker, nprocs=torch.cuda.device_count(), args=(torch.cuda.device_count(), args))  # ngpus_per_node = torch.cuda.device_count() == 8
 
@@ -344,7 +360,7 @@ def main_worker(local_rank, ngpus_per_node, args):
                         level=logging.INFO if args.local_rank in [-1, 0] else logging.WARN,
                         filename=os.path.join(args.output_dir, 'screen_output.log'))
     writer = SummaryWriter(log_dir=os.path.join(args.output_dir, "tensorboardlog"))
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Setup logging & TensorBoard Writer')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Setup logging & TensorBoard Writer') if (args.debug_flag == 1 or args.debug_flag == 2 or args.debug_flag == 3) else print('', end='')
 
 
     # Multiprocessing
@@ -352,12 +368,16 @@ def main_worker(local_rank, ngpus_per_node, args):
     port = os.environ['MASTER_PORT']                    # same for each gpu, each node
     hosts = int(os.environ['WORLD_SIZE'])               # 机器个数, 每台机器有8张卡   相当于脚本里的--nodes=4的数量
     rank = int(os.environ['RANK'])                      # 当前机器编号, 用了四台机器的话，编号分别是 0,1,2,3
+    # ip = '127.0.0.1'
+    # port = args.port
+    # hosts = 1
+    # rank = 0
     args.ngpus_per_node = ngpus_per_node                # 每台机器的GPU个数 (8 for huanfnag)
     args.world_size = hosts * args.ngpus_per_node
     args.world_rank = rank * args.ngpus_per_node + args.local_rank
     dist.init_process_group(backend='nccl', init_method=f'tcp://{ip}:{port}', world_size=args.world_size, rank=args.world_rank)
     args.is_main_proc = (args.world_rank == 0)
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Multiprocessing')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Multiprocessing') if (args.debug_flag == 1 or args.debug_flag == 2 or args.debug_flag == 3) else print('', end='')
 
 
     # Model & Tokenizer Setup
@@ -368,7 +388,7 @@ def main_worker(local_rank, ngpus_per_node, args):
         num_layers=args.meta_net_num_layers,
         output_size=model.feature_num,
     )
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Model & Tokenizer Setup')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Model & Tokenizer Setup') if (args.debug_flag == 1 or args.debug_flag == 2 or args.debug_flag == 3) else print('', end='')
 
 
     # DistributedDataParallel
@@ -379,7 +399,7 @@ def main_worker(local_rank, ngpus_per_node, args):
     meta_net.cuda(args.local_rank)
     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.local_rank])
     meta_net = torch.nn.parallel.DistributedDataParallel(meta_net, device_ids=[args.local_rank])
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: DistributedDataParallel')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: DistributedDataParallel') if (args.debug_flag == 1 or args.debug_flag == 2 or args.debug_flag == 3) else print('', end='')
 
 
     # Prepare optimizer
@@ -390,7 +410,7 @@ def main_worker(local_rank, ngpus_per_node, args):
                                 momentum=args.momentum,
                                 weight_decay=args.weight_decay)
     meta_optimizer = torch.optim.Adam(meta_net.parameters(), lr=args.meta_lr, weight_decay=args.meta_weight_decay)
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Prepare optimizer')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Prepare optimizer') if (args.debug_flag == 1 or args.debug_flag == 2 or args.debug_flag == 3) else print('', end='')
 
 
     cudnn.benchmark = True
@@ -398,7 +418,7 @@ def main_worker(local_rank, ngpus_per_node, args):
 
     # Prepare dataset
     train_loader, test_loader, train_sampler = get_loader(args)
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Prepare dataset')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Prepare dataset') if (args.debug_flag == 1 or args.debug_flag == 2 or args.debug_flag == 3) else print('', end='')
 
 
     # Init scores_all.csv
@@ -421,7 +441,7 @@ def main_worker(local_rank, ngpus_per_node, args):
         curr_acc1 = ckpt['curr_acc1']
         best_acc1 = ckpt['best_acc1']
         logger.info(f'[INFO] Auto Resume from {resume_dir}, from  finished epoch {args.start_epoch}, with acc_best{best_acc1}, acc_curr {curr_acc1}.')
-    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Auto Resume')
+    print(f'[Debug Info] [GPU:{args.local_rank}] Done: Auto Resume') if (args.debug_flag == 1 or args.debug_flag == 2 or args.debug_flag == 3) else print('', end='')
 
 
     # Start Train
@@ -429,7 +449,7 @@ def main_worker(local_rank, ngpus_per_node, args):
 
     start_time = time.time()
     for epoch in range(args.start_epoch, args.epochs):
-        print(f'[Debug Info] [GPU:{args.local_rank}] Enter Training! ')
+        print(f'[Debug Info] [GPU:{args.local_rank}] Enter Training! epoch: {epoch} ') if (args.debug_flag == 2) else print('', end='')
         train_sampler.set_epoch(epoch)
         loss_train, loss_meta, acc1_train = train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, optimizer, meta_optimizer, epoch, args)
         loss_test, acc1_test = validate(test_loader, model, criterion_ce, args)
@@ -478,6 +498,7 @@ def main_worker(local_rank, ngpus_per_node, args):
     logger.info("Training Complete.")
 
 
+"""
 def train(train_loader, model, criterion, optimizer, epoch, args):
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
@@ -522,10 +543,11 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if (i % args.print_freq == 0) and args.is_main_proc:
+        if ((i % args.print_freq == 0) or (i == len(train_loader) - 1)) and args.is_main_proc:
             progress.display(i)
 
     return losses.avg, top1.avg
+"""
 
 
 def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, optimizer, meta_optimizer, epoch, args):
@@ -545,7 +567,7 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
 
     end = time.time()
     for i, (images, target) in enumerate(train_loader):
-        print(f'[Debug Info] [GPU:{args.local_rank}] Enter epoch:{epoch}, iter:{i}.')
+        print(f'[Debug Info] [GPU:{args.local_rank}] Enter epoch:{epoch}, iter:{i}.') if (args.debug_flag == 2) else print('', end='')
         images = images.cuda(args.local_rank, non_blocking=True)
         target = target.cuda(args.local_rank, non_blocking=True)
 
@@ -553,8 +575,7 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
         target_p1, target_p2 = target.chunk(2, dim=0)
 
         data_time.update(time.time() - end)
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: data')
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: ')
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: data') if (args.debug_flag == 2) else print('', end='')
 
         # adjust learning rate
         lr = adjust_learning_rate(optimizer, init_lr=args.lr,
@@ -564,7 +585,7 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
                              epoch_total=args.epochs, warmup_epochs=args.warmup_epochs, epoch_cur=epoch,
                              num_iter_per_epoch=len(train_loader), i_iter=i)
         ratio = args.lambda_0 * (epoch / args.epochs)
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: lr')
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: lr') if (args.debug_flag == 2) else print('', end='')
 
         ###################################################
         ## part 1: images_p1 as train, images_p2 as meta ##
@@ -580,11 +601,11 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
         pseudo_net.load_state_dict(model.module.state_dict())
         pseudo_net.train()
 
-        pseudo_outputs_logits, pseudo_outputs_features = pseudo_net(images_p1)
+        pseudo_outputs_features = pseudo_net(images_p1)
+        pseudo_outputs_logits = pseudo_net.head(pseudo_outputs_features)
 
-        cv_matrix = meta_net(pseudo_outputs_features.detach()).to(args.local_rank)
+        cv_matrix = meta_net(pseudo_outputs_features.detach())
 
-        # pseudo_loss = criterion_isda(pseudo_net.head, pseudo_outputs_features, pseudo_outputs_logits, target_p1, ratio, cv_matrix)
         pseudo_loss = criterion_ce(pseudo_outputs_logits, target_p1)
 
         pseudo_grads = torch.autograd.grad(pseudo_loss, pseudo_net.parameters(), create_graph=True, allow_unused=True)
@@ -594,28 +615,27 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
         pseudo_optimizer.meta_step(pseudo_grads)
 
         del pseudo_grads
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: pseudo_grads')
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part1 Done: pseudo_grads') if (args.debug_flag == 2) else print('', end='')
 
 
 
 
-        meta_outputs_logits, meta_outputs_features = pseudo_net(images_p2)
+        meta_outputs_features = pseudo_net(images_p2)
+        meta_outputs_logits = pseudo_net.head(meta_outputs_features)
         meta_loss = criterion_ce(meta_outputs_logits, target_p2)
         meta_losses.update(meta_loss.item(), images_p2.size(0))
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: meta forward')
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part1 Done: meta forward') if (args.debug_flag == 2) else print('', end='')
 
         meta_optimizer.zero_grad()
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: meta_optimizer.zero_grad()')
         meta_loss.backward()
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: meta_loss.backward()')
         meta_optimizer.step()
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: meta_optimizer.step()')
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part1 Done: meta_optimizer.step()') if (args.debug_flag == 2) else print('', end='')
 
 
-        outputs_logits, outputs_features = model(images_p1)
+        outputs_features = model(images_p1)
         cv_matrix = meta_net(outputs_features)
-        loss = criterion_isda(model.module.head, outputs_features, outputs_logits, target_p1, ratio, cv_matrix)
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: loss')
+        loss, outputs_logits = criterion_isda(model.module.head, outputs_features, target_p1, ratio, cv_matrix)
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part1 Done: loss') if (args.debug_flag == 2) else print('', end='')
 
 
         # measure accuracy and record loss
@@ -628,7 +648,7 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Done: optimizer.step()')
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part1 Done: optimizer.step()') if (args.debug_flag == 2) else print('', end='')
 
 
 
@@ -646,11 +666,12 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
         pseudo_net.load_state_dict(model.module.state_dict())
         pseudo_net.train()
 
-        pseudo_outputs_logits, pseudo_outputs_features = pseudo_net(images_p2)
+        pseudo_outputs_features = pseudo_net(images_p2)
+        pseudo_outputs_logits = pseudo_net.head(pseudo_outputs_features)
 
         cv_matrix = meta_net(pseudo_outputs_features.detach())
 
-        pseudo_loss = criterion_isda(pseudo_net.head, pseudo_outputs_features, pseudo_outputs_logits, target_p2, ratio, cv_matrix)
+        pseudo_loss = criterion_ce(pseudo_outputs_logits, target_p2)
 
         pseudo_grads = torch.autograd.grad(pseudo_loss, pseudo_net.parameters(), create_graph=True, allow_unused=True)
 
@@ -659,21 +680,28 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
         pseudo_optimizer.meta_step(pseudo_grads)
 
         del pseudo_grads
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part2 Done: pseudo_grads') if (args.debug_flag == 2) else print('', end='')
 
 
 
-        meta_outputs_logits, meta_outputs_features = pseudo_net(images_p1)
+
+        meta_outputs_features = pseudo_net(images_p1)
+        meta_outputs_logits = pseudo_net.head(meta_outputs_features)
         meta_loss = criterion_ce(meta_outputs_logits, target_p1)
         meta_losses.update(meta_loss.item(), images_p1.size(0))
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part2 Done: meta forward') if (args.debug_flag == 2) else print('', end='')
 
         meta_optimizer.zero_grad()
         meta_loss.backward()
         meta_optimizer.step()
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part2 Done: meta_optimizer.step()') if (args.debug_flag == 2) else print('', end='')
 
 
-        outputs_logits, outputs_features = model(images_p2)
+        outputs_features = model(images_p2)
         cv_matrix = meta_net(outputs_features)
-        loss = criterion_isda(model.module.head, outputs_features, outputs_logits, target_p2, ratio, cv_matrix)
+        loss, outputs_logits = criterion_isda(model.module.head, outputs_features, target_p2, ratio, cv_matrix)
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part2 Done: loss') if (args.debug_flag == 2) else print('', end='')
+
 
         # measure accuracy and record loss
         acc1, acc5 = accuracy(outputs_logits, target_p2, topk=(1, 5))
@@ -685,14 +713,19 @@ def train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, opti
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        print(f'[Debug Info] [GPU:{args.local_rank}] [epoch:{epoch}, iter:{i}] Part2 Done: optimizer.step()') if (args.debug_flag == 2) else print('', end='')
 
+
+        ###################################################
+        ##                finish exchange                ##
+        ###################################################
 
 
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if (i % args.print_freq == 0) and args.is_main_proc:
+        if ((i % args.print_freq == 0) or (i == len(train_loader) - 1)) and args.is_main_proc:
             progress.display(i)
     
     return losses.avg, meta_losses.avg, top1.avg
@@ -718,7 +751,8 @@ def validate(val_loader, model, criterion, args):
             target = target.cuda(args.local_rank, non_blocking=True)
 
             # compute output
-            logits, features = model(images)
+            features = model(images)
+            logits = model.module.head(features)            
             loss = criterion(logits, target)
 
             # measure accuracy and record loss
@@ -739,7 +773,7 @@ def validate(val_loader, model, criterion, args):
             batch_time.update(time.time() - end)
             end = time.time()
 
-            if (i % args.print_freq == 0) and args.is_main_proc:
+            if ((i % args.print_freq == 0) or (i == len(val_loader) - 1)) and args.is_main_proc:
                 progress.display(i)
         
         if args.is_main_proc:
