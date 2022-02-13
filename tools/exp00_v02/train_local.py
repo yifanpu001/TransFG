@@ -172,6 +172,13 @@ def count_parameters(model):
     return params/1000000
 
 
+def get_free_port():
+    sock = socket.socket()
+    sock.bind(('', 0))
+    free_port = sock.getsockname()[1]
+    return free_port
+
+
 """ part of main """
 def get_args():
     parser = argparse.ArgumentParser()
