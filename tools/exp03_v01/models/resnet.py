@@ -14,7 +14,8 @@ __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
 model_urls = {
     'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
     'resnet34': 'https://download.pytorch.org/models/resnet34-333f7ec4.pth',
-    "resnet50": "/ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG/pretrained_ViT/resnet50-0676ba61.pth",
+    # "resnet50": "/ceph-jd/pub/jupyter/pxr/notebooks/pyf/TransFG/pretrained_ViT/resnet50-0676ba61.pth",
+    "resnet50": "/home/pyf/code/TransFG/pretrained_models/resnet50-0676ba61.pth",
     'resnet101': 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth',
     'resnet152': 'https://download.pytorch.org/models/resnet152-b121ed2d.pth',
     'resnext50_32x4d': 'https://download.pytorch.org/models/resnext50_32x4d-7cdf4587.pth',
@@ -221,9 +222,9 @@ class ResNet(nn.Module):
         x = self.avgpool(x)
         features = torch.flatten(x, 1)
         # x = self.head(features)
-        x = torch.nn.functional.linear(features, weight=self.head.weight.detach(), bias=self.head.bias.detach())
+        # x = torch.nn.functional.linear(features, weight=self.head.weight.detach(), bias=self.head.bias.detach())
 
-        return x, features
+        return features
 
     def forward(self, x):
         return self._forward_impl(x)
