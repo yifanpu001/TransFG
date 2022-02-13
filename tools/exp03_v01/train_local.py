@@ -314,7 +314,7 @@ def setup_model(args):
             pretrained_model = torch.load(args.pretrained_model)['model']
             model.load_state_dict(pretrained_model)
     elif args.model_type.startswith("resnet"):
-        model = eval(args.model_type)(pretrained=True, num_classes=args.num_classes)
+        model = eval(args.model_type)(pretrained=True, num_classes=args.num_classes, pretrained_dir=args.pretrained_dir)
 
 
     return args, model
