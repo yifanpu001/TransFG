@@ -448,7 +448,7 @@ def main_worker(local_rank, ngpus_per_node, args):
 
     start_time = time.time()
     for epoch in range(args.start_epoch, args.epochs):
-        print(f'[Debug Info] [GPU:{args.local_rank}] Enter Training! epoch: {epoch} ') if (args.debug_flag == 2) else print('', end='')
+        print(f'[Debug Info] [GPU:{args.local_rank}] Enter Training! epoch: {epoch} ') if (args.debug_flag == 1) else print('', end='')
         train_sampler.set_epoch(epoch)
         loss_train, loss_meta, acc1_train = train_meta(train_loader, model, meta_net, criterion_isda, criterion_ce, optimizer, meta_optimizer, epoch, args)
         loss_test, acc1_test = validate(test_loader, model, criterion_ce, args)
