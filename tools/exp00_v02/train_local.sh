@@ -86,7 +86,7 @@ hfai python tools/exp00_v02/train.py \
 ######### run02 (short epoch)
 # 20 epoch
 CUDA_VISIBLE_DEVICES=0,1,2,3 python tools/exp00_v02/train_local.py \
---output_dir_root /root/share/TransFG/ --output_dir output/exp00_v02/run02_debug \
+--output_dir_root /root/share/TransFG/ --output_dir output/exp00_v02/run02 \
 --pretrained_dir /root/share/TransFG/pretrained_models/resnet50-0676ba61.pth \
 --model_type resnet50 \
 --data_root /root/data/public \
@@ -108,6 +108,22 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python tools/exp00_v02/train_local.py \
 --data_root /root/data/public \
 --dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 4 \
 --epochs 20 --warmup_epochs 5 --round 3 &&\
+
+CUDA_VISIBLE_DEVICES=0,1,2,3 python tools/exp00_v02/train_local.py \
+--output_dir_root /root/share/TransFG/ --output_dir output/exp00_v02/run02 \
+--pretrained_dir /root/share/TransFG/pretrained_models/resnet50-0676ba61.pth \
+--model_type resnet50 \
+--data_root /root/data/public \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 4 \
+--epochs 20 --warmup_epochs 5 --round 4 &&\
+
+CUDA_VISIBLE_DEVICES=0,1,2,3 python tools/exp00_v02/train_local.py \
+--output_dir_root /root/share/TransFG/ --output_dir output/exp00_v02/run02 \
+--pretrained_dir /root/share/TransFG/pretrained_models/resnet50-0676ba61.pth \
+--model_type resnet50 \
+--data_root /root/data/public \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 4 \
+--epochs 20 --warmup_epochs 5 --round 5 &&\
 
 # 30 epoch
 CUDA_VISIBLE_DEVICES=0,1,2,3 python tools/exp00_v02/train_local.py \
@@ -134,6 +150,22 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python tools/exp00_v02/train_local.py \
 --dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 4 \
 --epochs 30 --warmup_epochs 5 --round 3 &&\
 
+CUDA_VISIBLE_DEVICES=0,1,2,3 python tools/exp00_v02/train_local.py \
+--output_dir_root /root/share/TransFG/ --output_dir output/exp00_v02/run02 \
+--pretrained_dir /root/share/TransFG/pretrained_models/resnet50-0676ba61.pth \
+--model_type resnet50 \
+--data_root /root/data/public \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 4 \
+--epochs 30 --warmup_epochs 5 --round 4 &&\
+
+CUDA_VISIBLE_DEVICES=0,1,2,3 python tools/exp00_v02/train_local.py \
+--output_dir_root /root/share/TransFG/ --output_dir output/exp00_v02/run02 \
+--pretrained_dir /root/share/TransFG/pretrained_models/resnet50-0676ba61.pth \
+--model_type resnet50 \
+--data_root /root/data/public \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 4 \
+--epochs 30 --warmup_epochs 5 --round 5 &&\
+
 # 40 epoch
 CUDA_VISIBLE_DEVICES=0,1,2,3 python tools/exp00_v02/train_local.py \
 --output_dir_root /root/share/TransFG/ --output_dir output/exp00_v02/run02 \
@@ -158,3 +190,19 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python tools/exp00_v02/train_local.py \
 --data_root /root/data/public \
 --dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 4 \
 --epochs 40 --warmup_epochs 5 --round 3 &&\
+
+CUDA_VISIBLE_DEVICES=0,1,2,3 python tools/exp00_v02/train_local.py \
+--output_dir_root /root/share/TransFG/ --output_dir output/exp00_v02/run02 \
+--pretrained_dir /root/share/TransFG/pretrained_models/resnet50-0676ba61.pth \
+--model_type resnet50 \
+--data_root /root/data/public \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 4 \
+--epochs 40 --warmup_epochs 5 --round 4 &&\
+
+CUDA_VISIBLE_DEVICES=0,1,2,3 python tools/exp00_v02/train_local.py \
+--output_dir_root /root/share/TransFG/ --output_dir output/exp00_v02/run02 \
+--pretrained_dir /root/share/TransFG/pretrained_models/resnet50-0676ba61.pth \
+--model_type resnet50 \
+--data_root /root/data/public \
+--dataset CUB_200_2011 --train_batch_size 64 --lr 3e-2 --workers 4 \
+--epochs 40 --warmup_epochs 5 --round 5 &&\
